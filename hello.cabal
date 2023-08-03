@@ -33,7 +33,16 @@ flag threaded
 executable hello
   hs-source-dirs: src
   main-is: hello.hs
-  build-depends: base >= 4.2 && < 5
+  other-modules:
+    EAST
+  build-depends: 
+    base >= 4.2 && < 5, 
+    generics-eot ==0.4.0.1
+  default-extensions:
+    TypeApplications
+    AllowAmbigousTypes
+    FlexibleInstanances
+    OverloadedStrings
 
   if flag(threaded)
      ghc-options: -threaded
