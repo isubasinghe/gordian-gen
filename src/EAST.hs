@@ -1,50 +1,47 @@
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module EAST where
+
+
 import GHC.Generics
 
-import           Data.Char
-import           Data.List
-import           Data.Typeable
+data BV
+data B
 
-class GSize f where
-  gsize :: f p -> Int
+data Expr a where 
+  Add :: Expr BV -> Expr BV -> Expr BV 
+  Sub :: Expr BV -> Expr BV -> Expr BV
+  And :: Expr B -> Expr B -> Expr B
 
-instance (GSize a, GSize b) => GSize (a :*: b) where
-  gsize (_ :*: _) = gsize (undefined :: a p) + gsize (undefined :: b p)
 
-instance (GSize a) => GSize (M1 D c a) where
-  gsize (M1 x) = gsize x
+data AST where
+  Expr :: Expr a -> AST
+  Func :: [Expr a] -> AST
 
-instance (GSize a) => GSize (M1 C c a) where
-  gsize (M1 x) = gsize x
 
-instance (GSize a) => GSize (M1 S c a) where
-  gsize (M1 x) = gsize x
+data MyMaybe a = MyNothing | MyJust a
+  deriving (Generic)
 
-instance (GSize a) => GSize (M1 i c a) where
-  gsize (M1 x) = gsize x
 
-instance BVBoolRepr a => GSize (K1 R a) where
-  gsize (K1 x) = size x
+data Tag 
+    = A Bool 
+    | B BV 
+    | C Bool
+    deriving (Generic)
 
-class BVBoolRepr a where
-  size :: a -> Int
+preFunc :: MyMaybe Int -> Tag -> AST
+preFunc m t = [fn| 
+  caseWhen m {
+    MyJust(val) -> {
+     caseWhen t {
+      A(val) -> val && true
+      B(val) -> val | 0xb01
+      C(val) -> val || false
+     } 
+    }
+    MyNothing -> 4 
+  }|]
 
-  default size :: (Generic a, GSize (Rep a)) => a -> Int
-  size = gsize . from
-
-instance BVBoolRepr Bool where
-  size _ = 1
-
-instance BVBoolRepr Int where
-  size _ = 32  -- Assuming a 32-bit integer
