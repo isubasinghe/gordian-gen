@@ -2,7 +2,7 @@
 -- documentation, which can be found here:
 --   http://haskell.org/cabal/release/cabal-latest/doc/users-guide/
 
-name: hello
+name: gordian-gen
 version: 0.0.0.1
 license: BSD3
 license-file: LICENSE
@@ -27,9 +27,9 @@ source-repository head
 flag threaded
   default: False
 
-executable hello
+executable gordian-gen 
   hs-source-dirs: src
-  main-is: hello.hs
+  main-is: gordian-gen.hs
   other-modules:
     EAST
     EDSL.Tuple

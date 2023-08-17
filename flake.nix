@@ -26,7 +26,7 @@
       in flake // {
         legacyPackages = pkgs;
 
-        packages.default = flake.packages."hello:exe:hello";
+        packages.default = flake.packages."gordian-gen:exe:gordian-gen";
       });
 
   # # --- Flake Local Nix Configuration ----------------------------
