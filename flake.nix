@@ -17,6 +17,7 @@
               final.haskell-nix.hix.project {
                 src = ./.;
                 evalSystem = "x86_64-linux";
+                index-state = "2023-03-01T00:00:00Z";
               };
           })
         ];

@@ -14,7 +14,7 @@ stability: stable
 homepage: http://www.haskell.org/hello/
 synopsis: Hello World, an example package
 category: Console, Text
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 build-type: Simple
 
 Description:
@@ -57,22 +57,6 @@ executable hello
     text, 
     bv-sized, 
     ghc-prim
-  default-extensions:
-    AllowAmbiguousTypes
-    DataKinds
-    DeriveGeneric
-    DeriveAnyClass
-    DerivingStrategies
-    KindSignatures
-    UndecidableInstances
-    DefaultSignatures
-    FlexibleContexts
-    TypeOperators
-    PolyKinds
-    FlexibleInstances
-    ScopedTypeVariables
-
-  default-language: GHC2021
 
   if flag(threaded)
      ghc-options: -threaded
