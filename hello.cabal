@@ -3,29 +3,26 @@
 --   http://haskell.org/cabal/release/cabal-latest/doc/users-guide/
 
 name: hello
-version: 1.0.0.2
+version: 0.0.0.1
 license: BSD3
 license-file: LICENSE
-copyright: (c) Simon Marlow
-author: Simon Marlow
-maintainer: Simon Marlow <marlowsd@gmail.com>
-bug-reports: mailto:marlowsd@gmail.com
+copyright: (c) Trustworthy Systems
+author: Isitha Subasinghe
+maintainer: Isitha Subasinghe <isubasinghe@unsw.edu.au>
+bug-reports: mailto:isubasinghe@unsw.edu.au
 stability: stable
-homepage: http://www.haskell.org/hello/
-synopsis: Hello World, an example package
+homepage: https://github.com/isubasinghe/gordian-gen
+synopsis: gordian-gen, a generator of SMT bitvec queries from Haskell specification
 category: Console, Text
 cabal-version: >= 1.8
 build-type: Simple
 
 Description:
-  This is an implementation of the classic "Hello World" program in
-  Haskell, as an example of how to create a minimal Haskell
-  application using Cabal and Hackage.  Please submit any suggestions and
-  improvements.
+  This is a generator of SMT from Haskell specification. 
 
 source-repository head
-  type:     darcs
-  location: http://darcs.haskell.org/hello/
+  type:     git
+  location: https://github.com/isubasinghe/gordian-gen
 
 flag threaded
   default: False
