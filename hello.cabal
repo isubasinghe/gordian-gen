@@ -35,14 +35,44 @@ executable hello
   main-is: hello.hs
   other-modules:
     EAST
+    EDSL.Tuple
+    EDSL.Elt
+    EDSL.Rec 
+    EDSL.Trace 
+    EDSL.Type
+    EDSL.TH.Common
+    EDSL.TH.Elt
+    EDSL.TH.IsTuple
+    EDSL.TH.Pattern
+    EDSL.Exp
+    EDSL.Match
+    EDSL.Debug
+    EDSL.Maybe
+    SMT
+
   build-depends: 
     base >= 4.2 && < 5, 
-    template-haskell ==2.18.0.0
+    template-haskell,
+    containers >= 0.6 && < 0.7,
+    text, 
+    bv-sized, 
+    ghc-prim
   default-extensions:
-    TypeApplications
-    AllowAmbigousTypes
-    FlexibleInstanances
-    OverloadedStrings
+    AllowAmbiguousTypes
+    DataKinds
+    DeriveGeneric
+    DeriveAnyClass
+    DerivingStrategies
+    KindSignatures
+    UndecidableInstances
+    DefaultSignatures
+    FlexibleContexts
+    TypeOperators
+    PolyKinds
+    FlexibleInstances
+    ScopedTypeVariables
+
+  default-language: GHC2021
 
   if flag(threaded)
      ghc-options: -threaded
