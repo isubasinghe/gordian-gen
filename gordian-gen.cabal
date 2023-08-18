@@ -45,6 +45,8 @@ executable gordian-gen
     EDSL.Match
     EDSL.Debug
     EDSL.Maybe
+    EDSL.Either
+    EDSL.Bool
     SMT
 
   build-depends: 
