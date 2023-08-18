@@ -55,7 +55,10 @@ executable gordian-gen
     containers >= 0.6 && < 0.7,
     text, 
     bv-sized, 
-    ghc-prim
+    ghc-prim, 
+    s-cargot, 
+    mtl, 
+    transformers
 
   if flag(threaded)
      ghc-options: -threaded
