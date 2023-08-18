@@ -1,32 +1,29 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BlockArguments      #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PostfixOperators    #-}
-{-# LANGUAGE ViewPatterns        #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 {-# OPTIONS_GHC -Werror=incomplete-patterns        #-}
 
 module SMT where
-import Data.Typeable
-import Data.BitVector.Sized
-import GHC.TypeLits
+import           Data.BitVector.Sized
+import           Data.Typeable
+import           GHC.TypeLits
 
-import EDSL.Exp
-import EDSL.Elt
-import EDSL.Maybe
-import EDSL.Match
-import EDSL.Debug
-import EDSL.Trace
-
-newtype SUInt a = SUInt { uint :: BV a }
-newtype SInt a = SInt { int :: BV a }
+import           EDSL.Bool
+import           EDSL.Debug
+import           EDSL.Elt
+import           EDSL.Exp
+import           EDSL.Match
+import           EDSL.Maybe
+import           EDSL.Trace
 
 data Expr t where
   VAR :: String -> Expr a
@@ -45,11 +42,7 @@ dummy :: forall a. Elt a => Exp a
 dummy = Undef (eltR @a)
 
 
-preCond :: Exp (Maybe Int) -> Exp Int
+preCond :: Exp (Maybe Int) -> Exp Bool
 preCond = match \case
-  Just_ _ -> Const 1
-  Nothing_ -> Const 0 
-
-mkFunction :: Exp a -> Exp a 
-mkFunction = undefined
-
+  Just_ a  -> a `Eq` (Const 3)
+  Nothing_ -> False_

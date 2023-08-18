@@ -1,4 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE PatternGuards        #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -6,9 +9,6 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DefaultSignatures    #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE PatternGuards #-}
 
 module EDSL.Elt (
   Elt(..),
@@ -16,15 +16,15 @@ module EDSL.Elt (
   TAG,
 ) where
 
-import EDSL.Rec
-import EDSL.Type
-import EDSL.Trace
+import           EDSL.Rec
+import           EDSL.Trace
+import           EDSL.Type
 
-import Data.Bits
-import Data.Char
-import GHC.Generics
+import           Data.Bits
+import           Data.Char
+import           GHC.Generics
 
-import Type.Reflection
+import           Type.Reflection
 
 
 class Typeable a => Elt a where

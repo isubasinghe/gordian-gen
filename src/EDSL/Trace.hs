@@ -2,9 +2,9 @@
 
 module EDSL.Trace where
 
-import EDSL.Rec
-import EDSL.Type
-import {-# SOURCE #-} EDSL.Elt
+import {-# SOURCE #-}           EDSL.Elt
+import                          EDSL.Rec
+import                          EDSL.Type
 
 type TAG = Word8
 

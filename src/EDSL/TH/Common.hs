@@ -1,11 +1,11 @@
-{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module EDSL.TH.Common where
 
-import Data.Bits
-import Data.List
-import Data.Word
-import Language.Haskell.TH
+import           Data.Bits
+import           Data.List
+import           Data.Word
+import           Language.Haskell.TH
 
 
 -- TODO: This backwards-engineers what tags GHC.Generics will give to

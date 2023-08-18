@@ -1,27 +1,27 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE EmptyDataDecls       #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StrictData           #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module EAST where
 
-import Data.Kind ()
-import Data.Proxy
-import GHC.Generics
+import           Data.Kind    ()
+import           Data.Proxy
+import           GHC.Generics
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
@@ -76,7 +76,7 @@ class Size a where
   default bitvecSize :: GSize (Rep a) => Proxy a -> Int
   bitvecSize _ = gbitvecSize (Proxy :: Proxy (Rep a))
 
-  smtName :: Proxy a -> String 
+  smtName :: Proxy a -> String
   default smtName :: GSize (Rep a) => Proxy a -> String
   smtName _ = gsmtName (Proxy :: Proxy (Rep a))
 
@@ -147,8 +147,8 @@ instance Size Bool where
 
 
 myMaybePre :: MyMaybe Int -> Bool
-myMaybePre m = case m of 
-                MyJust a -> a == 4 
+myMaybePre m = case m of
+                MyJust a  -> a == 4
                 MyNothing -> False
 
 -- (MyMaybeInt)
@@ -191,11 +191,11 @@ type family Proxied n where
 type family Apply n m where
   Apply n m = n
 
-data SimpleGADT a where 
+data SimpleGADT a where
   SG1 :: SimpleGADT Int
 deriving instance Show (SimpleGADT a)
 
-funcName :: SimpleGADT a -> String 
-funcName  x = case x of 
+funcName :: SimpleGADT a -> String
+funcName  x = case x of
                     SG1 -> show x
 

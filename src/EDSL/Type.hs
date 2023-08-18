@@ -5,10 +5,10 @@ module EDSL.Type (
   Word8,
 ) where
 
-import EDSL.Rec
-import {-# SOURCE #-} EDSL.Elt
+import {-# SOURCE #-}           EDSL.Elt
+import                          EDSL.Rec
 
-import Data.Word
+import                          Data.Word
 
 data TypeR a where
   TypeRunit :: TypeR ()
@@ -22,6 +22,7 @@ data PrimType a where
 
 data IntegralType a where
   TypeInt   :: IntegralType Int
+  TypeInteger :: IntegralType Integer
   TypeWord8 :: IntegralType Word8
 
 data FloatingType a where
@@ -31,6 +32,7 @@ class IsPrim a where
   primType :: PrimType a
 
 instance IsPrim Int   where primType = IntegralNumType TypeInt
+instance IsPrim Integer   where primType = IntegralNumType TypeInteger
 instance IsPrim Word8 where primType = IntegralNumType TypeWord8
 instance IsPrim Float where primType = FloatingNumType TypeFloat
 
@@ -45,8 +47,9 @@ instance Show (PrimType a) where
   show (FloatingNumType t) = show t
 
 instance Show (IntegralType a) where
-  show TypeInt   = "Int"
-  show TypeWord8 = "Word8"
+  show TypeInt     = "Int"
+  show TypeInteger = "Integer"
+  show TypeWord8   = "Word8"
 
 instance Show (FloatingType a) where
   show TypeFloat = "Float"
@@ -87,8 +90,9 @@ undef (TypeRprim t)   = prim t
     prim (FloatingNumType x) = floating x
 
     integral :: IntegralType t -> t
-    integral TypeInt   = 0
-    integral TypeWord8 = 0
+    integral TypeInt     = 0
+    integral TypeInteger = 0
+    integral TypeWord8   = 0
 
     floating :: FloatingType t -> t
     floating TypeFloat = 0

@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{ pkgs, ... }: {
   # name = "project-name";
   compiler-nix-name = "ghc8107"; # Version of GHC to use
 

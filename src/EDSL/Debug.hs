@@ -3,8 +3,8 @@ module EDSL.Debug (
   module Text.Printf,
 ) where
 
-import Text.Printf
 import qualified Debug.Trace as T
+import           Text.Printf
 
 dEBUG :: Bool
 dEBUG = False

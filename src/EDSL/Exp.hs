@@ -1,26 +1,54 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE PatternGuards        #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module EDSL.Exp where
 
-import EDSL.Elt
-import EDSL.Rec
-import EDSL.Trace
-import EDSL.Tuple
-import EDSL.Type
+import           EDSL.Elt
+import           EDSL.Rec
+import           EDSL.Trace
+import           EDSL.Tuple
+import           EDSL.Type
 
-import Data.Dynamic
-import Data.Map                                           ( Map )
-import Data.Text                                          ( Text )
-import qualified Data.Map                                 as Map
-import qualified Data.Text                                as T
+import           Data.BitVector.Sized
+import           Data.Dynamic
+import           Data.Map             (Map)
+import qualified Data.Map             as Map
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           GHC.Generics
+import           GHC.TypeNats
 
 dEBUG :: Bool
 dEBUG = False
+
+newtype SUInt a = SUInt { uint :: BV a }
+  deriving Generic
+
+newtype SInt a = SInt { int :: BV a }
+  deriving Generic
+
+
+instance Elt Integer where
+  type EltR Integer = Integer
+  toElt = id
+  fromElt = id
+  eltR = TypeRprim primType
+  traceR = [TraceRprim primType]
+
+instance (KnownNat a) =>  Elt (BV a) where
+
+instance (KnownNat a) => Elt (SInt a) where
+instance (KnownNat a) => Elt (SUInt a) where
 
 data Exp a where
   -- STLC with explicit let-binding. We don't bother with the type-level environment.
@@ -45,8 +73,9 @@ data Exp a where
   Case      :: Elt a => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
 
   -- PrimOps
-  Add       :: Exp Int -> Exp Int -> Exp Int
-  Eq        :: Exp Int -> Exp Int -> Exp Bool
+  Add       :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
+  UAdd       :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
+  Eq        :: (Eq a) => Exp a -> Exp a -> Exp Bool
 
 
 -- Tuples are heterogeneous lists using () and (,)
@@ -72,10 +101,10 @@ type Env = Map Text Dynamic
 
 -- Standard type-safe evaluator
 --
-eval :: Exp a -> a
-eval = evalExp Map.empty
+{- eval :: Exp a -> a
+eval = evalExp Map.empty -}
 
-evalExp :: Env -> Exp a -> a
+{- evalExp :: Env -> Exp a -> a
 evalExp env = \case
   Const c         -> toElt c
   Var ix          -> lookupEnv ix env
@@ -93,17 +122,16 @@ evalExp env = \case
                        else evalExp env e
   Case x xs       -> evalExp env $ lookupCase (fromElt (evalExp env x)) xs
   --
-  Add x y         -> evalExp env x + evalExp env y
-  Eq x y          -> evalExp env x == evalExp env y
+  Eq x y          -> evalExp env x == evalExp env y -}
 
-evalTup :: Env -> Tuple t -> t
+{- evalTup :: Env -> Tuple t -> t
 evalTup env = \case
   Unit     -> ()
   Pair a b -> (evalTup env a, evalTup env b)
-  Exp e    -> evalExp env e
+  Exp e    -> evalExp env e -}
 
 evalPrj :: TupleIdx t e -> t -> e
-evalPrj PrjZ e = e
+evalPrj PrjZ e          = e
 evalPrj (PrjL t) (l, _) = evalPrj t l
 evalPrj (PrjR t) (_, r) = evalPrj t r
 

@@ -1,13 +1,12 @@
+{-# LANGUAGE BlockArguments      #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE ViewPatterns        #-}
-{-# LANGUAGE LambdaCase  #-}
-{-# LANGUAGE BlockArguments  #-}
-{-# LANGUAGE DeriveGeneric  #-}
-{-# LANGUAGE DeriveAnyClass  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- {-# OPTIONS_GHC -ddump-splices    #-}
 
@@ -17,13 +16,13 @@ module EDSL.Maybe (
   pattern Just_
 ) where
 
-import EDSL.Elt
-import EDSL.Exp
-import EDSL.TH.Pattern
-import EDSL.TH.IsTuple
-import EDSL.Match
-import EDSL.Tuple
-import Data.Map
+import           Data.Map
+import           EDSL.Elt
+import           EDSL.Exp
+import           EDSL.Match
+import           EDSL.TH.IsTuple
+import           EDSL.TH.Pattern
+import           EDSL.Tuple
 
 instance Elt a => Elt (Maybe a) where
 instance Elt a => IsTuple (Maybe a) where

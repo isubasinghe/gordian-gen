@@ -6,11 +6,11 @@
 
 module EDSL.Match where
 
-import EDSL.Exp
-import EDSL.Elt
-import qualified EDSL.Debug as Debug
+import qualified EDSL.Debug  as Debug
+import           EDSL.Elt
+import           EDSL.Exp
 
-import Text.Printf
+import           Text.Printf
 
 
 -- Embedded pattern matching

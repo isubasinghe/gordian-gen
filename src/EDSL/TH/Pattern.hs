@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE PatternGuards    #-}
 {-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE PatternGuards #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 
 module EDSL.TH.Pattern (
@@ -10,17 +10,17 @@ module EDSL.TH.Pattern (
   mkPattern',
 ) where
 
-import EDSL.Elt
-import EDSL.Exp
-import EDSL.Rec
-import EDSL.Trace
-import EDSL.Type
-import EDSL.TH.Common
+import           EDSL.Elt
+import           EDSL.Exp
+import           EDSL.Rec
+import           EDSL.TH.Common
+import           EDSL.Trace
+import           EDSL.Type
 
-import Data.List
-import Control.Monad
-import Language.Haskell.TH                        hiding ( Exp, Match, match )
-import qualified Language.Haskell.TH              as TH
+import           Control.Monad
+import           Data.List
+import           Language.Haskell.TH hiding (Exp, Match, match)
+import qualified Language.Haskell.TH as TH
 
 
 -- TODO (completed in the full implementation in Accelerate)

@@ -9,11 +9,11 @@
 
 module EDSL.Tuple where
 
-import EDSL.Type
-import EDSL.Elt
+import           EDSL.Elt
+import           EDSL.Type
 
-import Data.Bits
-import GHC.Generics
+import           Data.Bits
+import           GHC.Generics
 
 class IsTuple t where
   type TupleR t

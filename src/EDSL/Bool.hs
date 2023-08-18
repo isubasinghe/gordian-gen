@@ -3,7 +3,6 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE ViewPatterns        #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- {-# OPTIONS_GHC -ddump-splices    #-}
 
@@ -13,9 +12,9 @@ module EDSL.Bool (
   pattern True_,
 ) where
 
-import EDSL.Elt
-import EDSL.Tuple
-import EDSL.TH.Pattern
+import           EDSL.Elt
+import           EDSL.TH.Pattern
+import           EDSL.Tuple
 
 instance Elt Bool
 instance IsTuple Bool
