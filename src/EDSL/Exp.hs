@@ -1,42 +1,40 @@
-{-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE PatternGuards        #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module EDSL.Exp where
 
-import           EDSL.Elt
-import           EDSL.Rec
-import           EDSL.Trace
-import           EDSL.Tuple
-import           EDSL.Type
-
-import           Data.BitVector.Sized
-import           Data.Dynamic
-import           Data.Map             (Map)
-import qualified Data.Map             as Map
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import           GHC.Generics
-import           GHC.TypeNats
+import Data.BitVector.Sized
+import Data.Dynamic
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Text (Text)
+import qualified Data.Text as T
+import EDSL.Elt
+import EDSL.Rec
+import EDSL.Trace
+import EDSL.Tuple
+import EDSL.Type
+import GHC.Generics
+import GHC.TypeNats
 
 dEBUG :: Bool
 dEBUG = False
 
-newtype SUInt a = SUInt { uint :: BV a }
-  deriving Generic
+newtype SUInt a = SUInt {uint :: BV a}
+  deriving (Generic)
 
-newtype SInt a = SInt { int :: BV a }
-  deriving Generic
-
+newtype SInt a = SInt {int :: BV a}
+  deriving (Generic)
 
 instance Elt Integer where
   type EltR Integer = Integer
@@ -45,51 +43,50 @@ instance Elt Integer where
   eltR = TypeRprim primType
   traceR = [TraceRprim primType]
 
-instance (KnownNat a) =>  Elt (BV a) where
+instance (KnownNat a) => Elt (BV a)
 
-instance (KnownNat a) => Elt (SInt a) where
-instance (KnownNat a) => Elt (SUInt a) where
+instance (KnownNat a) => Elt (SInt a)
+
+instance (KnownNat a) => Elt (SUInt a)
 
 data Exp a where
   -- STLC with explicit let-binding. We don't bother with the type-level environment.
   -- Values are stored in representation format
-  Const     :: Elt a => EltR a -> Exp a
-  Var       :: Idx t -> Exp t
-  Let       :: Idx a -> Exp a -> Exp b -> Exp b -- letrec
-  App       :: Exp (a -> b) -> Exp a -> Exp b
-  Lam       :: Idx a -> Exp b -> Exp (a -> b)
-
+  Const :: Elt a => EltR a -> Exp a
+  Var :: Idx t -> Exp t
+  Let :: Idx a -> Exp a -> Exp b -> Exp b -- letrec
+  App :: Exp (a -> b) -> Exp a -> Exp b
+  Lam :: Idx a -> Exp b -> Exp (a -> b)
   -- Add generic product types
-  Tuple     :: IsTuple t => Tuple (TupleR t) -> Exp t
-  Prj       :: IsTuple t => TupleIdx (TupleR t) e -> Exp t -> Exp e
-
+  Tuple :: IsTuple t => Tuple (TupleR t) -> Exp t
+  Prj :: IsTuple t => TupleIdx (TupleR t) e -> Exp t -> Exp e
   -- Recursive types
-  Unroll    :: Exp (Rec a) -> Exp a
-  Roll      :: Exp a -> Exp (Rec a)
-
+  Unroll :: Exp (Rec a) -> Exp a
+  Roll :: Exp a -> Exp (Rec a)
   -- Pattern matching
-  Undef     :: TypeR (EltR a) -> Exp a
-  Match     :: TraceR (EltR a) -> Exp a -> Exp a
-  Case      :: Elt a => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
+  Undef :: TypeR (EltR a) -> Exp a
+  Match :: TraceR (EltR a) -> Exp a -> Exp a
+  Case :: Elt a => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
 
   -- PrimOps
-  Add       :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
-  UAdd       :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
-  Eq        :: (Eq a) => Exp a -> Exp a -> Exp Bool
+  Add :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
+  UAdd :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
+  Eq :: (Eq a) => Exp a -> Exp a -> Exp Bool
+
+  Func :: Exp a -> Exp b -> Exp b
 
 
 -- Tuples are heterogeneous lists using () and (,)
 --
 data Tuple t where
   Unit :: Tuple ()
-  Exp  :: Exp a -> Tuple a
+  Exp :: Exp a -> Tuple a
   Pair :: Tuple a -> Tuple b -> Tuple (a, b)
 
 data TupleIdx s t where
-  PrjZ ::                 TupleIdx t      t
+  PrjZ :: TupleIdx t t
   PrjL :: TupleIdx l t -> TupleIdx (l, r) t
   PrjR :: TupleIdx r t -> TupleIdx (l, r) t
-
 
 -- Very unsafe variable bindings!
 --
@@ -97,7 +94,6 @@ data Idx t where
   Idx :: Typeable t => Text -> Idx t
 
 type Env = Map Text Dynamic
-
 
 -- Standard type-safe evaluator
 --
@@ -131,7 +127,7 @@ evalTup env = \case
   Exp e    -> evalExp env e -}
 
 evalPrj :: TupleIdx t e -> t -> e
-evalPrj PrjZ e          = e
+evalPrj PrjZ e = e
 evalPrj (PrjL t) (l, _) = evalPrj t l
 evalPrj (PrjR t) (_, r) = evalPrj t r
 
@@ -139,22 +135,29 @@ lookupCase :: a -> [(TraceR a, Exp b)] -> Exp b
 lookupCase val = go
   where
     go [] = error "lookupCase: unmatched case"
-    go ((tag,cont):rest)
+    go ((tag, cont) : rest)
       | eqTrace tag val = cont
-      | otherwise       = go rest
+      | otherwise = go rest
 
 lookupEnv :: forall t. Idx t -> Env -> t
 lookupEnv (Idx nm) env
-  | Just v  <- Map.lookup nm env
-  , Just v' <- fromDynamic v
-  = v'
-  | otherwise
-  = error ("lookupEnv: not found: " ++ T.unpack nm)
+  | Just v <- Map.lookup nm env,
+    Just v' <- fromDynamic v =
+      v'
+  | otherwise =
+      error ("lookupEnv: not found: " ++ T.unpack nm)
 
 eqTrace :: TraceR a -> a -> Bool
-eqTrace TraceRunit         ()      = True
-eqTrace (TraceRrec _)      (Rec _) = True
-eqTrace (TraceRprim _)     _       = True
-eqTrace (TraceRundef _)    _       = True
-eqTrace (TraceRtag tag ta) (t, a)  = t == tag && eqTrace ta a
-eqTrace (TraceRpair ta tb) (a, b)  = eqTrace ta a && eqTrace tb b
+eqTrace TraceRunit () = True
+eqTrace (TraceRrec _) (Rec _) = True
+eqTrace (TraceRprim _) _ = True
+eqTrace (TraceRundef _) _ = True
+eqTrace (TraceRtag tag ta) (t, a) = t == tag && eqTrace ta a
+eqTrace (TraceRpair ta tb) (a, b) = eqTrace ta a && eqTrace tb b
+
+
+replaceVar :: (Typeable a) => (Exp a -> Exp b) -> T.Text -> Exp b
+replaceVar f name = f (Var (Idx name))
+
+
+

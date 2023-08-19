@@ -1,17 +1,15 @@
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module EDSL.Match where
 
-import qualified EDSL.Debug  as Debug
-import           EDSL.Elt
-import           EDSL.Exp
-
-import           Text.Printf
-
+import qualified EDSL.Debug as Debug
+import EDSL.Elt
+import EDSL.Exp
+import Text.Printf
 
 -- Embedded pattern matching
 -- =========================
@@ -20,15 +18,16 @@ match :: Matching f => f -> f
 match f = mkFun (mkMatch f) id
 
 data Args f where
-  (:->)  :: Exp a -> Args b -> Args (Exp a -> b)
+  (:->) :: Exp a -> Args b -> Args (Exp a -> b)
   Result :: Args (Exp a)
 
 class Matching a where
   type ResultT a
   mkMatch :: a -> Args a -> Exp (ResultT a)
-  mkFun   :: (Args f -> Exp (ResultT a))
-          -> (Args a -> Args f)
-          -> a
+  mkFun ::
+    (Args f -> Exp (ResultT a)) ->
+    (Args a -> Args f) ->
+    a
 
 instance Elt a => Matching (Exp a) where
   type ResultT (Exp a) = a
@@ -49,8 +48,8 @@ instance Elt a => Matching (Exp a) where
   -- >   Just_ _  ->
   --
   mkMatch e Result = case e of
-                       Match _ x -> x
-                       _         -> e
+    Match _ x -> x
+    _ -> e
 
 instance (Elt e, Matching r) => Matching (Exp e -> r) where
   type ResultT (Exp e -> r) = ResultT r
@@ -62,8 +61,7 @@ instance (Elt e, Matching r) => Matching (Exp e -> r) where
       -- XXX: This first case is used when we have nested calls to 'match',
       -- such as in Test.t8, and removes the redundant 'Match' terms
       --
-      Match{} -> mkMatch (f x) xs
-
+      Match {} -> mkMatch (f x) xs
       -- XXX: If there is only a single alternative, we can elide the case
       -- statement at this point. This can occur when pattern matching on
       -- product types, e.g. Test.t13
@@ -85,57 +83,59 @@ instance (Elt e, Matching r) => Matching (Exp e -> r) where
       --
       -- Which is equivalent to not using the `match` operator at all.
       --
-      _       -> case rhs of
-                   [(_,r)] -> r
-                   _       -> Case x rhs
+      _ -> case rhs of
+        [(_, r)] -> r
+        _ -> Case x rhs
     where
-      rhs = [ Debug.trace (printf "mkMatch: trace=%s" (show trace))
-            $ (trace, mkMatch (f x') xs)
-            | trace <- traceR @e
-            , let x' = Match trace x ]
+      rhs =
+        [ Debug.trace (printf "mkMatch: trace=%s" (show trace)) $
+            (trace, mkMatch (f x') xs)
+          | trace <- traceR @e,
+            let x' = Match trace x
+        ]
 
-      -- XXX TODO: Generate nested cases.
-      --
-      -- Because we must enumerate the entire pathway through a type, to
-      -- explore every possible pattern match, we get a flat structure. For
-      -- example, these are the tags for the type 'Maybe (Bool,Bool)'
-      --
-      -- > [TagRtag (GHC.Word.W8# 0) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRpair TagRundef TagRunit)) (TagRpair TagRundef TagRunit)))
-      -- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 0) TagRunit)) (TagRtag (GHC.Word.W8# 0) TagRunit)))
-      -- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 0) TagRunit)) (TagRtag (GHC.Word.W8# 1) TagRunit)))
-      -- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 1) TagRunit)) (TagRtag (GHC.Word.W8# 0) TagRunit)))
-      -- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 1) TagRunit)) (TagRtag (GHC.Word.W8# 1) TagRunit)))]
-      --
-      -- When generating the 'Case' terms we could look over this structure
-      -- and group alternatives which have the same initial tag. For
-      -- constructors with more than one field this is a bit more
-      -- difficult, but still doable. For the following:
-      --
-      -- > t23 :: Exp (Maybe (Bool,Bool)) -> Exp Int
-      -- > t23 x = x & match \case
-      -- >   Nothing_                 -> constant 0
-      -- >   Just_ (T2 False_ False_) -> constant 1
-      -- >   Just_ (T2 False_ True_)  -> constant 2
-      -- >   Just_ (T2 True_  False_) -> constant 3
-      -- >   Just_ (T2 True_  True_)  -> constant 4
-      --
-      -- Instead of:
-      --
-      -- > case tag# undef of
-      -- >   0....# -> 0
-      -- >   1.0.0# -> 1
-      -- >   1.0.1# -> 2
-      -- >   1.1.0# -> 3
-      -- >   1.1.1# -> 4
-      --
-      -- We should generate something like:
-      --
-      -- > case tag# undef of
-      -- >   0._# -> 0
-      -- >   1._# -> case tag# of
-      -- >             _.0._# -> case tag# of
-      -- >                         _._.0# -> 1
-      -- >                         _._.1# -> 2
-      -- >             _.1._# -> case tag# of
-      -- >                         _._.0# -> 3
-      -- >                         _._.1# -> 4
+-- XXX TODO: Generate nested cases.
+--
+-- Because we must enumerate the entire pathway through a type, to
+-- explore every possible pattern match, we get a flat structure. For
+-- example, these are the tags for the type 'Maybe (Bool,Bool)'
+--
+-- > [TagRtag (GHC.Word.W8# 0) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRpair TagRundef TagRunit)) (TagRpair TagRundef TagRunit)))
+-- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 0) TagRunit)) (TagRtag (GHC.Word.W8# 0) TagRunit)))
+-- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 0) TagRunit)) (TagRtag (GHC.Word.W8# 1) TagRunit)))
+-- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 1) TagRunit)) (TagRtag (GHC.Word.W8# 0) TagRunit)))
+-- > ,TagRtag (GHC.Word.W8# 1) (TagRpair TagRunit (TagRpair (TagRpair TagRunit (TagRtag (GHC.Word.W8# 1) TagRunit)) (TagRtag (GHC.Word.W8# 1) TagRunit)))]
+--
+-- When generating the 'Case' terms we could look over this structure
+-- and group alternatives which have the same initial tag. For
+-- constructors with more than one field this is a bit more
+-- difficult, but still doable. For the following:
+--
+-- > t23 :: Exp (Maybe (Bool,Bool)) -> Exp Int
+-- > t23 x = x & match \case
+-- >   Nothing_                 -> constant 0
+-- >   Just_ (T2 False_ False_) -> constant 1
+-- >   Just_ (T2 False_ True_)  -> constant 2
+-- >   Just_ (T2 True_  False_) -> constant 3
+-- >   Just_ (T2 True_  True_)  -> constant 4
+--
+-- Instead of:
+--
+-- > case tag# undef of
+-- >   0....# -> 0
+-- >   1.0.0# -> 1
+-- >   1.0.1# -> 2
+-- >   1.1.0# -> 3
+-- >   1.1.1# -> 4
+--
+-- We should generate something like:
+--
+-- > case tag# undef of
+-- >   0._# -> 0
+-- >   1._# -> case tag# of
+-- >             _.0._# -> case tag# of
+-- >                         _._.0# -> 1
+-- >                         _._.1# -> 2
+-- >             _.1._# -> case tag# of
+-- >                         _._.0# -> 3
+-- >                         _._.1# -> 4

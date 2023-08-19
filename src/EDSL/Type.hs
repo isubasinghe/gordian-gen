@@ -1,27 +1,27 @@
 {-# LANGUAGE GADTs #-}
 
-module EDSL.Type (
-  module EDSL.Type,
-  Word8,
-) where
+module EDSL.Type
+  ( module EDSL.Type,
+    Word8,
+  )
+where
 
-import {-# SOURCE #-}           EDSL.Elt
-import                          EDSL.Rec
-
-import                          Data.Word
+import Data.Word
+import {-# SOURCE #-} EDSL.Elt
+import EDSL.Rec
 
 data TypeR a where
   TypeRunit :: TypeR ()
   TypeRprim :: PrimType a -> TypeR a
-  TypeRrec  :: Elt a => TypeR (EltR a) -> TypeR (Rec a)
-  TypeRpair :: TypeR a -> TypeR b -> TypeR (a,b)
+  TypeRrec :: Elt a => TypeR (EltR a) -> TypeR (Rec a)
+  TypeRpair :: TypeR a -> TypeR b -> TypeR (a, b)
 
 data PrimType a where
   IntegralNumType :: IntegralType a -> PrimType a
   FloatingNumType :: FloatingType a -> PrimType a
 
 data IntegralType a where
-  TypeInt   :: IntegralType Int
+  TypeInt :: IntegralType Int
   TypeInteger :: IntegralType Integer
   TypeWord8 :: IntegralType Word8
 
@@ -31,15 +31,18 @@ data FloatingType a where
 class IsPrim a where
   primType :: PrimType a
 
-instance IsPrim Int   where primType = IntegralNumType TypeInt
-instance IsPrim Integer   where primType = IntegralNumType TypeInteger
+instance IsPrim Int where primType = IntegralNumType TypeInt
+
+instance IsPrim Integer where primType = IntegralNumType TypeInteger
+
 instance IsPrim Word8 where primType = IntegralNumType TypeWord8
+
 instance IsPrim Float where primType = FloatingNumType TypeFloat
 
 instance Show (TypeR a) where
-  show TypeRunit         = "()"
-  show (TypeRrec r)      = show r
-  show (TypeRprim t)     = show t
+  show TypeRunit = "()"
+  show (TypeRrec r) = show r
+  show (TypeRprim t) = show t
   show (TypeRpair ta tb) = "(" ++ show ta ++ "," ++ show tb ++ ")"
 
 instance Show (PrimType a) where
@@ -47,9 +50,9 @@ instance Show (PrimType a) where
   show (FloatingNumType t) = show t
 
 instance Show (IntegralType a) where
-  show TypeInt     = "Int"
+  show TypeInt = "Int"
   show TypeInteger = "Integer"
-  show TypeWord8   = "Word8"
+  show TypeWord8 = "Word8"
 
 instance Show (FloatingType a) where
   show TypeFloat = "Float"
@@ -80,19 +83,19 @@ typeableDict (TypeRprim t) = prim t
 --}
 
 undef :: TypeR t -> t
-undef TypeRunit       = ()
-undef (TypeRrec t)    = Rec (toElt (undef t)) -- XXX: explode?
+undef TypeRunit = ()
+undef (TypeRrec t) = Rec (toElt (undef t)) -- XXX: explode?
 undef (TypeRpair l r) = (undef l, undef r)
-undef (TypeRprim t)   = prim t
+undef (TypeRprim t) = prim t
   where
     prim :: PrimType t -> t
     prim (IntegralNumType x) = integral x
     prim (FloatingNumType x) = floating x
 
     integral :: IntegralType t -> t
-    integral TypeInt     = 0
+    integral TypeInt = 0
     integral TypeInteger = 0
-    integral TypeWord8   = 0
+    integral TypeWord8 = 0
 
     floating :: FloatingType t -> t
     floating TypeFloat = 0

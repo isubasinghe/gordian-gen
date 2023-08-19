@@ -1,4 +1,5 @@
 module Main (main) where
-import           EAST
+
+import EAST
 
 main = putStrLn "Hello, World!"

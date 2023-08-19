@@ -4,7 +4,7 @@
   # Used to find the project root
   projectRootFile = "flake.nix";
   # Enable the terraform formatter
-  programs.stylish-haskell.enable = true;
+  programs.ormolu.enable = true;
   programs.cabal-fmt.enable = true;
   programs.nixpkgs-fmt.enable = true;
 }

@@ -1,31 +1,30 @@
-{-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DefaultSignatures    #-}
-{-# LANGUAGE DeriveAnyClass       #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE DerivingStrategies   #-}
-{-# LANGUAGE EmptyDataDecls       #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE PolyKinds            #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE StrictData           #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module EAST where
 
-import           Data.Kind    ()
-import           Data.Proxy
-import           GHC.Generics
+import Data.Kind ()
+import Data.Proxy
+import GHC.Generics
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
-
 
 -- >>> :kind! (Rep (MyMaybe Int))
 -- (Rep (MyMaybe Int)) :: * -> *
@@ -143,13 +142,10 @@ instance Size Bool where
   bitvecSize _ = 1
   smtName _ = ""
 
-
-
-
 myMaybePre :: MyMaybe Int -> Bool
 myMaybePre m = case m of
-                MyJust a  -> a == 4
-                MyNothing -> False
+  MyJust a -> a == 4
+  MyNothing -> False
 
 -- (MyMaybeInt)
 -- smtName (Proxy :: (Proxy (MyMaybe Int)))
@@ -157,7 +153,6 @@ myMaybePre m = case m of
 
 -- function(m)
 -- (ite ((type m) == MyJust) (= (MyJustInt.Get m) 4) False)
-
 
 data HList :: [*] -> * where
   HNil :: HList '[]
@@ -193,9 +188,9 @@ type family Apply n m where
 
 data SimpleGADT a where
   SG1 :: SimpleGADT Int
+
 deriving instance Show (SimpleGADT a)
 
 funcName :: SimpleGADT a -> String
-funcName  x = case x of
-                    SG1 -> show x
-
+funcName x = case x of
+  SG1 -> show x

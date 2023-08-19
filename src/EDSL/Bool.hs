@@ -1,22 +1,26 @@
-{-# LANGUAGE PatternSynonyms     #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- {-# OPTIONS_GHC -ddump-splices    #-}
 
-module EDSL.Bool (
-  Bool(..),
-  pattern False_,
-  pattern True_,
-) where
+module EDSL.Bool
+  ( Bool (..),
+    pattern False_,
+    pattern True_,
+  )
+where
 
-import           EDSL.Elt
-import           EDSL.TH.Pattern
-import           EDSL.Tuple
+import EDSL.Elt
+import EDSL.TH.Pattern
+import EDSL.Tuple
 
 instance Elt Bool
+
 instance IsTuple Bool
 
 mkPattern ''Bool

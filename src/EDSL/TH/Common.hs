@@ -2,11 +2,10 @@
 
 module EDSL.TH.Common where
 
-import           Data.Bits
-import           Data.List
-import           Data.Word
-import           Language.Haskell.TH
-
+import Data.Bits
+import Data.List
+import Data.Word
+import Language.Haskell.TH
 
 -- TODO: This backwards-engineers what tags GHC.Generics will give to
 -- the constructors. Instead, we should extract this directly by
@@ -27,32 +26,29 @@ import           Language.Haskell.TH
 --
 constructorTags :: Int -> [Word8]
 constructorTags n =
-  let
-      m = n `quot` 2
-      l = take m     (iterate (True:) [False])
-      r = take (n-m) (iterate (True:) [True])
+  let m = n `quot` 2
+      l = take m (iterate (True :) [False])
+      r = take (n - m) (iterate (True :) [True])
 
       bitsToTag = foldl' f 0
         where
-          f i False =         i `shiftL` 1
-          f i True  = setBit (i `shiftL` 1) 0
-  in
-  map bitsToTag (l ++ r)
-
+          f i False = i `shiftL` 1
+          f i True = setBit (i `shiftL` 1) 0
+   in map bitsToTag (l ++ r)
 
 tupT :: [TypeQ] -> TypeQ
 tupT tup =
   let n = length tup
-   in foldl' (\ts t -> [t| $ts $t |]) (tupleT n) tup
+   in foldl' (\ts t -> [t|$ts $t|]) (tupleT n) tup
 
 tyVarBndrName :: TyVarBndr -> Name
-tyVarBndrName (PlainTV  n)   = n
+tyVarBndrName (PlainTV n) = n
 tyVarBndrName (KindedTV n _) = n
 
 tyConName :: Type -> Maybe Name
-tyConName (ConT n)        = Just n
-tyConName (InfixT _ n _)  = Just n
+tyConName (ConT n) = Just n
+tyConName (InfixT _ n _) = Just n
 tyConName (UInfixT _ n _) = Just n
-tyConName (AppT t _)      = tyConName t
-tyConName (ParensT t)     = tyConName t
-tyConName _               = Nothing
+tyConName (AppT t _) = tyConName t
+tyConName (ParensT t) = tyConName t
+tyConName _ = Nothing

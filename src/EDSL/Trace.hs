@@ -2,9 +2,9 @@
 
 module EDSL.Trace where
 
-import {-# SOURCE #-}           EDSL.Elt
-import                          EDSL.Rec
-import                          EDSL.Type
+import {-# SOURCE #-} EDSL.Elt
+import EDSL.Rec
+import EDSL.Type
 
 type TAG = Word8
 
@@ -32,23 +32,23 @@ type TAG = Word8
 --   (1#,((),.))                -- Just
 --
 data TraceR a where
-  TraceRunit   :: TraceR ()
-  TraceRprim   :: PrimType a -> TraceR a
-  TraceRrec    :: TypeR (EltR a) -> TraceR (Rec a)
-  TraceRundef  :: TypeR a -> TraceR a
-  TraceRtag    :: TAG -> TraceR a -> TraceR (Word8, a)
-  TraceRpair   :: TraceR a -> TraceR b -> TraceR (a, b)
+  TraceRunit :: TraceR ()
+  TraceRprim :: PrimType a -> TraceR a
+  TraceRrec :: TypeR (EltR a) -> TraceR (Rec a)
+  TraceRundef :: TypeR a -> TraceR a
+  TraceRtag :: TAG -> TraceR a -> TraceR (Word8, a)
+  TraceRpair :: TraceR a -> TraceR b -> TraceR (a, b)
 
 instance Show (TraceR a) where
-  show TraceRunit         = "()"
-  show (TraceRrec _)      = "*"
-  show (TraceRprim _)     = "."
-  show (TraceRundef _)    = "undef"
-  show (TraceRtag t a)    = "(" ++ show t ++ "#," ++ show a ++ ")"
+  show TraceRunit = "()"
+  show (TraceRrec _) = "*"
+  show (TraceRprim _) = "."
+  show (TraceRundef _) = "undef"
+  show (TraceRtag t a) = "(" ++ show t ++ "#," ++ show a ++ ")"
   show (TraceRpair ta tb) = "(" ++ show ta ++ "," ++ show tb ++ ")"
 
 untrace :: TypeR t -> TraceR t
-untrace TypeRunit         = TraceRunit
-untrace (TypeRrec t)      = TraceRundef (TypeRrec t)
-untrace (TypeRprim t)     = TraceRundef (TypeRprim t)
+untrace TypeRunit = TraceRunit
+untrace (TypeRrec t) = TraceRundef (TypeRrec t)
+untrace (TypeRprim t) = TraceRundef (TypeRprim t)
 untrace (TypeRpair ta tb) = TraceRpair (untrace ta) (untrace tb)
