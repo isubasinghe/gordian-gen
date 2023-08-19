@@ -24,4 +24,3 @@ instance Elt Bool
 instance IsTuple Bool
 
 mkPattern ''Bool
-

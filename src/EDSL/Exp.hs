@@ -67,14 +67,11 @@ data Exp a where
   Undef :: TypeR (EltR a) -> Exp a
   Match :: TraceR (EltR a) -> Exp a -> Exp a
   Case :: Elt a => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
-
   -- PrimOps
   Add :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
   UAdd :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
   Eq :: (Eq a) => Exp a -> Exp a -> Exp Bool
-
   Func :: Exp a -> Exp b -> Exp b
-
 
 -- Tuples are heterogeneous lists using () and (,)
 --
@@ -155,9 +152,5 @@ eqTrace (TraceRundef _) _ = True
 eqTrace (TraceRtag tag ta) (t, a) = t == tag && eqTrace ta a
 eqTrace (TraceRpair ta tb) (a, b) = eqTrace ta a && eqTrace tb b
 
-
 replaceVar :: (Typeable a) => (Exp a -> Exp b) -> T.Text -> Exp b
 replaceVar f name = f (Var (Idx name))
-
-
-
