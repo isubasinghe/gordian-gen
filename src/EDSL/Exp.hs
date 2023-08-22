@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -71,7 +72,10 @@ data Exp a where
   Add :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
   UAdd :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
   Eq :: (Eq a) => Exp a -> Exp a -> Exp Bool
-  Func :: Exp a -> Exp b -> Exp b
+  Func :: Idx a -> Exp b -> Exp (FuncIdx b)
+
+-- use as a type index to prevent doing any other options on this type
+data FuncIdx t
 
 -- Tuples are heterogeneous lists using () and (,)
 --
@@ -151,6 +155,3 @@ eqTrace (TraceRprim _) _ = True
 eqTrace (TraceRundef _) _ = True
 eqTrace (TraceRtag tag ta) (t, a) = t == tag && eqTrace ta a
 eqTrace (TraceRpair ta tb) (a, b) = eqTrace ta a && eqTrace tb b
-
-replaceVar :: (Typeable a) => (Exp a -> Exp b) -> T.Text -> Exp b
-replaceVar f name = f (Var (Idx name))

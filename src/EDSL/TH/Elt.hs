@@ -109,7 +109,7 @@ mkCon st pts tvs tag prev next = \case
   NormalC nm fs -> mkNormalC st pts tvs tag nm prev (map snd fs) next
   RecC nm fs -> fail "mkElt: TODO: record syntax"
   InfixC a nm b -> fail "mkElt: TODO: infix constructors"
-  _ -> fail "mkElt: only constructors for \"vanilla\" syntax are supported"
+  _anyOtherFailure -> fail "mkElt: only constructors for \"vanilla\" syntax are supported"
 
 mkNormalC :: Bool -> [Name] -> [Name] -> Word8 -> Name -> [[Type]] -> [Type] -> [[Type]] -> Q (ClauseQ, ClauseQ, ExpQ)
 mkNormalC st pts tvs tag nm fs0 fs fs1 =
