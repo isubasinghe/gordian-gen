@@ -8,6 +8,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,8 +21,13 @@
 
 module EAST where
 
+import Data.BitVector.Sized
 import Data.Kind ()
 import Data.Proxy (Proxy (..))
+import Data.SCargot
+import Data.SCargot.Repr.Basic 
+import qualified Data.Text as T
+import EDSL.Exp
 import GHC.Float (int2Float)
 import GHC.Generics
   ( C,
@@ -36,6 +43,7 @@ import GHC.Generics
     type (:*:),
     type (:+:),
   )
+import GHC.TypeLits
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
@@ -202,7 +210,7 @@ class GBitVecRepr (f :: k) where
 instance {-# OVERLAPPABLE #-} GBitVecRepr f => GBitVecRepr (M1 i c f) where
   gnumberOfConstructors _ = gnumberOfConstructors (Proxy :: Proxy f)
   gmaxSize _ = gmaxSize (Proxy :: Proxy f)
-  gbitvecSize _ = 0
+  gbitvecSize _ = gbitvecSize (Proxy :: Proxy f)
   gsmtName _ = gsmtName (Proxy :: Proxy f)
   gconstructorSizes _ = gconstructorSizes (Proxy :: Proxy f)
   gconstructors _ = gconstructors (Proxy :: Proxy f)
@@ -232,7 +240,9 @@ instance (GBitVecRepr f, Constructor c) => GBitVecRepr (M1 C c f) where
       currName = conName (undefined :: M1 C c f x)
       sname = gsmtName (Proxy :: Proxy f)
       rest = if sname /= "" then "_of_" ++ sname else ""
-  gconstructorSizes _ = [Just $ gbitvecSize (Proxy :: Proxy f)]
+  gconstructorSizes _ = [if bvsize /= 0 then Just bvsize else Nothing]
+    where
+      bvsize = gbitvecSize (Proxy :: Proxy f)
 
 instance (GBitVecRepr a, GBitVecRepr b) => GBitVecRepr (a :*: b) where
   gnumberOfConstructors _ = 0
@@ -267,7 +277,7 @@ instance GBitVecRepr U1 where
 instance (BitVecRepr a) => GBitVecRepr (K1 i a) where
   gnumberOfConstructors _ = numberOfConstructors (Proxy :: Proxy a)
   gmaxSize _ = maxSize (Proxy :: Proxy a)
-  gbitvecSize _ = error "should not be reached"
+  gbitvecSize _ = bitvecSize (Proxy :: Proxy a)
   gsmtName _ = smtName (Proxy :: Proxy a)
   gconstructorSizes _ = []
   gconstructors _ = []
@@ -302,7 +312,7 @@ myMaybePre m = case m of
 -- function(m)
 -- (ite ((type m) == MyJust) (= (MyJustInt.Get m) 4) False)
 
-data HList :: [*] -> * where
+{- data HList :: [*] -> * where
   HNil :: HList '[]
   (:::) :: a -> HList as -> HList (a ': as)
 
@@ -315,7 +325,7 @@ instance
   where
   show (a ::: rest) = show a ++ " ::: " ++ show rest
 
-infixr 6 :::
+infixr 6 ::: -}
 
 {- data Expr a where
   Add :: Expr Int -> Expr Int -> Expr Int
@@ -342,3 +352,29 @@ deriving instance Show (SimpleGADT a)
 funcName :: SimpleGADT a -> String
 funcName x = case x of
   SG1 -> show x
+
+data Expr t where
+  VAR :: String -> Expr a
+  CONST :: a -> Expr a
+  ADD :: Expr (SInt k) -> Expr (SInt k) -> Expr (SInt k)
+  FUNC :: String -> Expr [(String, b)] -> Expr a -> Expr ([b] -> a)
+  APPLY :: Expr [a] -> Expr ([a] -> b) -> Expr b
+  ITE :: Expr a -> (Expr a -> Expr b) -> (Expr a -> Expr b) -> Expr b
+  UIasBV :: Expr (SUInt k) -> Expr (BV k)
+  IasBV :: Expr (SInt k) -> Expr (BV k)
+  EXTRACTBV :: ix + w' <= w => NatRepr ix -> NatRepr w' -> Expr (BV w) -> Expr (BV w')
+  CONCATBV :: (ix + w' <= w, w <= ix + w') => NatRepr ix -> NatRepr w' -> Expr (BV ix) -> Expr (BV w') -> Expr (BV w)
+
+data Atom
+  = AAdd
+  | AEq
+
+sAtom :: Atom -> T.Text
+sAtom = \case
+  AAdd -> "+"
+  AEq -> "="
+
+toSExpr :: Expr t -> SExpr Atom
+toSExpr _ = undefined
+
+
