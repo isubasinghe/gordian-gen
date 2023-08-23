@@ -12,7 +12,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -59,7 +58,7 @@ data MyMaybe a = MyNothing | MyJust !a
 -- bitvecSize = 33
 -- smtName = "MyMaybe_of_Int"
 -- constructors = [Just "MyJust_of_Int", Just "Nothing"]
--- constructorSizes = [Just 32, Just 1]
+-- constructorSizes = [Just 32, Nothing]
 
 -- >>> :kind! (Rep (MyMaybe (MyMaybe Int)))
 -- (Rep (MyMaybe (MyMaybe Int))) :: * -> *
@@ -233,7 +232,7 @@ instance (GBitVecRepr f, Constructor c) => GBitVecRepr (M1 C c f) where
       currName = conName (undefined :: M1 C c f x)
       sname = gsmtName (Proxy :: Proxy f)
       rest = if sname /= "" then "_of_" ++ sname else ""
-  gconstructorSizes _ = error "hit this"
+  gconstructorSizes _ = [Just $ gbitvecSize (Proxy :: Proxy f)]
 
 instance (GBitVecRepr a, GBitVecRepr b) => GBitVecRepr (a :*: b) where
   gnumberOfConstructors _ = 0
@@ -255,12 +254,12 @@ instance (GBitVecRepr a, GBitVecRepr b) => GBitVecRepr (a :+: b) where
       left = gsmtName (Proxy :: Proxy a)
       right = gsmtName (Proxy :: Proxy b)
   gconstructors _ = gconstructors (Proxy :: Proxy a) ++ gconstructors (Proxy :: Proxy b)
-  gconstructorSizes _ = undefined
+  gconstructorSizes _ = gconstructorSizes (Proxy :: Proxy a) ++ gconstructorSizes (Proxy :: Proxy b)
 
 instance GBitVecRepr U1 where
   gnumberOfConstructors _ = 0
   gmaxSize _ = 0
-  gbitvecSize _ = error "should not be reached"
+  gbitvecSize _ = 0
   gsmtName _ = ""
   gconstructors _ = undefined
   gconstructorSizes _ = undefined
