@@ -15,4 +15,3 @@ jobs:
         name: gordian-gen
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix build --accept-flake-config
-    - run: nix-shell --run "echo OK"
