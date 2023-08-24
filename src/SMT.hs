@@ -40,7 +40,7 @@ fromExpr (ADD a b) = undefined
 fromExpr (FUNC _ _) = undefined
 fromExpr (APPLY _ _) = undefined -}
 
-liftExpr :: Expr t -> Exp (Expr t)
+{- liftExpr :: Expr t -> Exp (Expr t)
 liftExpr (VAR _) = undefined
 liftExpr _ = undefined
 
@@ -89,4 +89,4 @@ data Foo :: Nat -> * where
   BigFoo :: (3 <= n) => Foo n
 
 myFoo :: Foo 4
-myFoo = BigFoo
+myFoo = BigFoo -}

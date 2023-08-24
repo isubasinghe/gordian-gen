@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -25,9 +26,11 @@ import Data.BitVector.Sized
 import Data.Kind ()
 import Data.Proxy (Proxy (..))
 import Data.SCargot
-import Data.SCargot.Repr.Basic 
+import Data.SCargot.Repr.Basic
 import qualified Data.Text as T
 import EDSL.Exp
+import EDSL.Match
+import EDSL.Elt
 import GHC.Float (int2Float)
 import GHC.Generics
   ( C,
@@ -44,6 +47,8 @@ import GHC.Generics
     type (:+:),
   )
 import GHC.TypeLits
+import EDSL.Maybe 
+import EDSL.Bool
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
@@ -312,9 +317,16 @@ myMaybePre m = case m of
 -- function(m)
 -- (ite ((type m) == MyJust) (= (MyJustInt.Get m) 4) False)
 
-{- data HList :: [*] -> * where
+type family (++) (as :: [k]) (bs :: [k]) :: [k] where
+  (++) a '[] = a
+  (++) '[] b = b
+  (++) (a ': as) bs = a ': (as ++ bs)
+
+data HList :: [*] -> * where
   HNil :: HList '[]
-  (:::) :: a -> HList as -> HList (a ': as)
+  (:#:) :: a -> HList as -> HList (a ': as)
+
+-- (:@:) :: HList as -> HList bs -> HList (as ++ bs)
 
 instance Show (HList '[]) where
   show HNil = "HNil"
@@ -323,9 +335,11 @@ instance
   (Show (HList as), Show a) =>
   Show (HList (a ': as))
   where
-  show (a ::: rest) = show a ++ " ::: " ++ show rest
+  show (a :#: rest) = show a ++ " ::: " ++ show rest
 
-infixr 6 ::: -}
+infixr 6 :#:
+
+-- infixr 6 :@:
 
 {- data Expr a where
   Add :: Expr Int -> Expr Int -> Expr Int
@@ -344,37 +358,93 @@ type family Proxied n where
 type family Apply n m where
   Apply n m = n
 
-data SimpleGADT a where
-  SG1 :: SimpleGADT Int
-
-deriving instance Show (SimpleGADT a)
-
-funcName :: SimpleGADT a -> String
-funcName x = case x of
-  SG1 -> show x
-
 data Expr t where
   VAR :: String -> Expr a
-  CONST :: a -> Expr a
   ADD :: Expr (SInt k) -> Expr (SInt k) -> Expr (SInt k)
-  FUNC :: String -> Expr [(String, b)] -> Expr a -> Expr ([b] -> a)
-  APPLY :: Expr [a] -> Expr ([a] -> b) -> Expr b
-  ITE :: Expr a -> (Expr a -> Expr b) -> (Expr a -> Expr b) -> Expr b
-  UIasBV :: Expr (SUInt k) -> Expr (BV k)
-  IasBV :: Expr (SInt k) -> Expr (BV k)
-  EXTRACTBV :: ix + w' <= w => NatRepr ix -> NatRepr w' -> Expr (BV w) -> Expr (BV w')
-  CONCATBV :: (ix + w' <= w, w <= ix + w') => NatRepr ix -> NatRepr w' -> Expr (BV ix) -> Expr (BV w') -> Expr (BV w)
+  ADDI :: Expr Int -> Expr Int -> Expr Int
+  NARG :: (BitVecRepr b) => String -> Proxy b -> Expr (FuncArg b)
+  LARG :: String -> Expr (FuncArg b) -> Expr b
+  FUNC :: (BitVecRepr b) => String -> [Expr (FuncArg b)] -> Expr a -> Expr ([b] -> a)
+
+{- ITE :: Expr a -> (Expr a -> Expr b) -> (Expr a -> Expr b) -> Expr b
+UIasBV :: Expr (SUInt k) -> Expr (BV k)
+IasBV :: Expr (SInt k) -> Expr (BV k)
+EXTRACTBV :: ix + w' <= w => NatRepr ix -> NatRepr w' -> Expr (BV w) -> Expr (BV w')
+CONCATBV :: (ix + w' <= w, w <= ix + w') => NatRepr ix -> NatRepr w' -> Expr (BV ix) -> Expr (BV w') -> Expr (BV w) -}
+
+data FuncArg b = FuncArg b
+  deriving (Show)
 
 data Atom
   = AAdd
   | AEq
+  | AVar !String
+  | ADefineFunc
+  | AAtom !String
 
 sAtom :: Atom -> T.Text
 sAtom = \case
   AAdd -> "+"
   AEq -> "="
+  AVar s -> T.pack s
+  ADefineFunc -> "define-fun"
+  AAtom s -> T.pack s
 
 toSExpr :: Expr t -> SExpr Atom
-toSExpr _ = undefined
+toSExpr (VAR s) = A (AVar s) ::: Nil
+toSExpr (ADD l r) = A AAdd ::: toSExpr l ::: toSExpr r ::: Nil
+toSExpr (FUNC name args body) = A ADefineFunc ::: A (AVar name) ::: L (map toSExpr args) ::: toSExpr body ::: Nil
+toSExpr (NARG n b) = A (AAtom n) ::: A (AAtom (smtName b)) ::: Nil
+toSExpr (ADDI l r) = A (AAdd) ::: (toSExpr l) ::: toSExpr r ::: Nil
+toSExpr (LARG n t) = A (AAtom n)
 
+mkLangPrinter :: SExprPrinter Atom (Expr t)
+mkLangPrinter =
+  setFromCarrier toSExpr $
+    setIndentStrategy (const Align) $
+      basicPrint sAtom
+
+myFunc :: Expr ([Int] -> Int)
+myFunc =
+  let arg1 :: Expr (FuncArg Int)
+      arg1 = NARG "a" (Proxy :: Proxy Int)
+      arg1' = LARG "a" arg1
+      body = ADDI arg1' arg1'
+   in FUNC "add1" [arg1] body
+
+preCond :: Exp (Maybe Int) -> Exp Bool
+preCond = match \case
+  Just_ _ -> True_
+  Nothing_ -> False_
+
+mkFunction1 :: (Elt a, Elt b) => Idx a -> (Exp a -> Exp b) -> Exp (FuncIdx b)
+mkFunction1 n fn =
+  let var = Var n
+   in Func n (fn var)
+
+preCond' :: Exp (FuncIdx Bool)
+preCond' = mkFunction1 (Idx "mvalue") preCond
+
+translateExp :: Exp a -> String
+translateExp = \case 
+                Const c -> "const"
+                Var ix -> "var"
+                Let (Idx v) a b -> "let"
+                Lam (Idx v) b -> "lam"
+                App f x -> "app"
+                Tuple t -> "tuple"
+                Prj tix t -> "prj"
+                Unroll e -> "unroll"
+                Match _ e -> "match"
+                Case x xs -> "case " ++ translateExp x
+                Eq x y -> "eq"
+                Func (Idx v) a -> "func" ++ " " ++ T.unpack v ++ translateExp a
+                Add a b -> "add"
+                UAdd a b -> "uadd"
+                Roll e -> "roll"
+                Undef e -> "undef"
+
+
+printSMT :: Expr t -> T.Text
+printSMT e = encode mkLangPrinter [e]
 
