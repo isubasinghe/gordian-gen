@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -12,9 +12,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -24,13 +25,11 @@ module EAST where
 
 import Data.BitVector.Sized
 import Data.Kind ()
+import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import Data.SCargot
 import Data.SCargot.Repr.Basic
 import qualified Data.Text as T
-import EDSL.Exp
-import EDSL.Match
-import EDSL.Elt
 import GHC.Float (int2Float)
 import GHC.Generics
   ( C,
@@ -47,8 +46,6 @@ import GHC.Generics
     type (:+:),
   )
 import GHC.TypeLits
-import EDSL.Maybe 
-import EDSL.Bool
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
@@ -339,41 +336,81 @@ instance
 
 infixr 6 :#:
 
--- infixr 6 :@:
-
-{- data Expr a where
-  Add :: Expr Int -> Expr Int -> Expr Int
-  Cases :: HList xs -> Expr as
-  ConstInt :: Int -> Expr Int
-  ConstSum :: HList xs -> Expr (HList xs) -}
-
 data Void
 
-{- myMaybeIntSum :: Expr (HList '[Proxy Int, Proxy Int])
-myMaybeIntSum =  ConstSum $ (Proxy :: Proxy Int) ::: (Proxy :: Proxy Int) ::: HNil -}
+data MaybeConstructors where
+  MaybeCJust :: MaybeConstructors
+  MaybeCNothing :: MaybeConstructors
 
-type family Proxied n where
-  Proxied n = n
 
-type family Apply n m where
-  Apply n m = n
+data NextRecvConstructors where 
+  NextRecvCNotification :: NextRecvConstructors
+  NextRecvCPPCall :: NextRecvConstructors 
+  NextRecvCUnknown :: NextRecvConstructors
 
-data Expr t where
+
+constructorNextRecvNotification :: Expr TNextRecvC
+constructorNextRecvNotification = ETNEXTRECV 0 
+constructorNextRecvPPCall = ETNEXTRECV 1
+constructorNextRecvUnknown = ETNEXTRECV 2
+
+constructorMaybeNothing :: Expr TMaybeC
+constructorMaybeNothing = ETMAYBE 0
+
+constructorMaybeJust :: Expr TMaybeC
+constructorMaybeJust = ETMAYBE 1
+
+data Type where
+  TBV32 :: Type
+  TBV64 :: Type
+  TBool :: Type
+
+  TCh :: Type
+
+  TChMsgInfo :: Type
+
+  TSetCh :: Type
+
+  TMsgInfo :: Type
+
+  TMaybe :: Type -> Type
+  TMaybeC :: Type
+
+  TNextRecv :: Type 
+  TNextRecvC :: Type
+
+data Expr (t :: Type) where
   VAR :: String -> Expr a
-  ADD :: Expr (SInt k) -> Expr (SInt k) -> Expr (SInt k)
-  ADDI :: Expr Int -> Expr Int -> Expr Int
-  NARG :: (BitVecRepr b) => String -> Proxy b -> Expr (FuncArg b)
-  LARG :: String -> Expr (FuncArg b) -> Expr b
-  FUNC :: (BitVecRepr b) => String -> [Expr (FuncArg b)] -> Expr a -> Expr ([b] -> a)
+  EBV32 :: Int -> Expr TBV32
+  EQU :: Expr a -> Expr a -> Expr TBool
+  EADD :: Expr TBV32 -> Expr TBV32 -> Expr TBV32
+  ITE :: Expr TBool -> Expr a -> Expr a -> Expr a
 
-{- ITE :: Expr a -> (Expr a -> Expr b) -> (Expr a -> Expr b) -> Expr b
-UIasBV :: Expr (SUInt k) -> Expr (BV k)
-IasBV :: Expr (SInt k) -> Expr (BV k)
-EXTRACTBV :: ix + w' <= w => NatRepr ix -> NatRepr w' -> Expr (BV w) -> Expr (BV w')
-CONCATBV :: (ix + w' <= w, w <= ix + w') => NatRepr ix -> NatRepr w' -> Expr (BV ix) -> Expr (BV w') -> Expr (BV w) -}
+  ETMAYBE :: Int -> Expr TMaybeC
+  EMAYBE_JUST :: Expr (TMaybe (a :: Type)) -> Expr (a :: Type)
+  EMAYBE_C :: Expr (TMaybe a) -> Expr TMaybeC
 
-data FuncArg b = FuncArg b
-  deriving (Show)
+  ETNEXTRECV :: Int -> Expr TNextRecvC
+  ENEXTRECV_NOTIFICATION :: Expr TNextRecv -> Expr TSetCh
+  ENEXTRECV_PPCALL :: Expr TNextRecv -> Expr TChMsgInfo
+  
+
+caseMaybeTBV32 :: Expr (TMaybe TBV32) -> (Expr TBV32 -> Expr a) -> Expr a -> Expr a
+caseMaybeTBV32 v just nothing = ITE (EMAYBE_C v `EQU` constructorMaybeJust) (just (EMAYBE_JUST v)) nothing
+
+
+caseNextRecv :: Expr TNextRecv -> (Expr TSetCh -> Expr a) -> Expr TChMsgInfo -> Expr a -> Expr a 
+caseNextRecv v noti ppcall unk = undefined
+
+pre :: Expr (TMaybe TBV32) -> Expr TBV32
+pre maybe32 = caseMaybeTBV32 maybe32 (\x -> x `EADD` EBV32 1) (EBV32 0)
+
+tbitsize :: Type -> Int
+tbitsize TBV32 = 32
+tbitsize _ = undefined
+
+bitsize :: Expr t -> Int
+bitsize _ = 32
 
 data Atom
   = AAdd
@@ -391,12 +428,7 @@ sAtom = \case
   AAtom s -> T.pack s
 
 toSExpr :: Expr t -> SExpr Atom
-toSExpr (VAR s) = A (AVar s) ::: Nil
-toSExpr (ADD l r) = A AAdd ::: toSExpr l ::: toSExpr r ::: Nil
-toSExpr (FUNC name args body) = A ADefineFunc ::: A (AVar name) ::: L (map toSExpr args) ::: toSExpr body ::: Nil
-toSExpr (NARG n b) = A (AAtom n) ::: A (AAtom (smtName b)) ::: Nil
-toSExpr (ADDI l r) = A (AAdd) ::: (toSExpr l) ::: toSExpr r ::: Nil
-toSExpr (LARG n t) = A (AAtom n)
+toSExpr _ = error ""
 
 mkLangPrinter :: SExprPrinter Atom (Expr t)
 mkLangPrinter =
@@ -404,47 +436,7 @@ mkLangPrinter =
     setIndentStrategy (const Align) $
       basicPrint sAtom
 
-myFunc :: Expr ([Int] -> Int)
-myFunc =
-  let arg1 :: Expr (FuncArg Int)
-      arg1 = NARG "a" (Proxy :: Proxy Int)
-      arg1' = LARG "a" arg1
-      body = ADDI arg1' arg1'
-   in FUNC "add1" [arg1] body
-
-preCond :: Exp (Maybe Int) -> Exp Bool
-preCond = match \case
-  Just_ _ -> True_
-  Nothing_ -> False_
-
-mkFunction1 :: (Elt a, Elt b) => Idx a -> (Exp a -> Exp b) -> Exp (FuncIdx b)
-mkFunction1 n fn =
-  let var = Var n
-   in Func n (fn var)
-
-preCond' :: Exp (FuncIdx Bool)
-preCond' = mkFunction1 (Idx "mvalue") preCond
-
-translateExp :: Exp a -> String
-translateExp = \case 
-                Const c -> "const"
-                Var ix -> "var"
-                Let (Idx v) a b -> "let"
-                Lam (Idx v) b -> "lam"
-                App f x -> "app"
-                Tuple t -> "tuple"
-                Prj tix t -> "prj"
-                Unroll e -> "unroll"
-                Match _ e -> "match"
-                Case x xs -> "case " ++ translateExp x
-                Eq x y -> "eq"
-                Func (Idx v) a -> "func" ++ " " ++ T.unpack v ++ translateExp a
-                Add a b -> "add"
-                UAdd a b -> "uadd"
-                Roll e -> "roll"
-                Undef e -> "undef"
-
-
 printSMT :: Expr t -> T.Text
 printSMT e = encode mkLangPrinter [e]
 
+-- myPreCond = [smtfunc| |]

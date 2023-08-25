@@ -98,34 +98,37 @@ type Env = Map Text Dynamic
 
 -- Standard type-safe evaluator
 --
-{- eval :: Exp a -> a
-eval = evalExp Map.empty -}
+eval :: Exp a -> a
+eval = evalExp Map.empty
 
-{- evalExp :: Env -> Exp a -> a
+evalExp :: Env -> Exp a -> a
 evalExp env = \case
-  Const c         -> toElt c
-  Var ix          -> lookupEnv ix env
-  Let (Idx v) a b -> let env' = Map.insert v (toDyn (evalExp env' a)) env
-                      in evalExp env' b
-  Lam (Idx v) b   -> \a -> evalExp (Map.insert v (toDyn a) env) b
-  App f x         -> (evalExp env f) (evalExp env x)
-  Tuple t         -> toTup $ evalTup env t
-  Prj tix t       -> evalPrj tix (fromTup (evalExp env t))
-  Unroll e        -> let Rec x = evalExp env e in x
-  Roll e          -> Rec (evalExp env e)
-  Undef{}         -> error "evalExp: undef"
-  Match _ e       -> if dEBUG
-                       then error "evalExp: match"
-                       else evalExp env e
-  Case x xs       -> evalExp env $ lookupCase (fromElt (evalExp env x)) xs
+  Const c -> toElt c
+  Var ix -> lookupEnv ix env
+  Let (Idx v) a b ->
+    let env' = Map.insert v (toDyn (evalExp env' a)) env
+     in evalExp env' b
+  Lam (Idx v) b -> \a -> evalExp (Map.insert v (toDyn a) env) b
+  App f x -> (evalExp env f) (evalExp env x)
+  Tuple t -> toTup $ evalTup env t
+  Prj tix t -> evalPrj tix (fromTup (evalExp env t))
+  Unroll e -> let Rec x = evalExp env e in x
+  Roll e -> Rec (evalExp env e)
+  Undef {} -> error "evalExp: undef"
+  Match _ e ->
+    if dEBUG
+      then error "evalExp: match"
+      else evalExp env e
+  Case x xs -> evalExp env $ lookupCase (fromElt (evalExp env x)) xs
   --
-  Eq x y          -> evalExp env x == evalExp env y -}
+  Eq x y -> evalExp env x == evalExp env y
+  _anyOther -> error "here"
 
-{- evalTup :: Env -> Tuple t -> t
+evalTup :: Env -> Tuple t -> t
 evalTup env = \case
-  Unit     -> ()
+  Unit -> ()
   Pair a b -> (evalTup env a, evalTup env b)
-  Exp e    -> evalExp env e -}
+  Exp e -> evalExp env e
 
 evalPrj :: TupleIdx t e -> t -> e
 evalPrj PrjZ e = e

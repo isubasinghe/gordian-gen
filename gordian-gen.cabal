@@ -44,6 +44,7 @@ executable gordian-gen
     EDSL.Tuple
     EDSL.Type
     SMT
+    TH.SMTFunc
 
   build-depends:
       base              >=4.2 && <5
@@ -51,9 +52,11 @@ executable gordian-gen
     , containers        >=0.6 && <0.7
     , ghc-prim
     , mtl
+    , parsec
     , s-cargot
     , template-haskell
     , text
+    , th-lift
     , transformers
 
   if flag(threaded)
