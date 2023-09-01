@@ -19,6 +19,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module EAST where
@@ -31,6 +32,8 @@ import Data.SCargot
 import Data.SCargot.Repr.Basic
 import qualified Data.Text as T
 import GHC.Float (int2Float)
+import Data.Typeable
+import Data.Data
 import GHC.Generics
   ( C,
     Constructor,
@@ -342,17 +345,17 @@ data MaybeConstructors where
   MaybeCJust :: MaybeConstructors
   MaybeCNothing :: MaybeConstructors
 
-
-data NextRecvConstructors where 
+{- data NextRecvConstructors where
   NextRecvCNotification :: NextRecvConstructors
-  NextRecvCPPCall :: NextRecvConstructors 
-  NextRecvCUnknown :: NextRecvConstructors
+  NextRecvCPPCall :: NextRecvConstructors
+  NextRecvCUnknown :: NextRecvConstructors -}
 
+{- constructorNextRecvNotification :: Expr TNextRecvC
+constructorNextRecvNotification = ETNEXTRECV 0 -}
 
-constructorNextRecvNotification :: Expr TNextRecvC
-constructorNextRecvNotification = ETNEXTRECV 0 
-constructorNextRecvPPCall = ETNEXTRECV 1
-constructorNextRecvUnknown = ETNEXTRECV 2
+{- constructorNextRecvPPCall = ETNEXTRECV 1
+
+constructorNextRecvUnknown = ETNEXTRECV 2 -}
 
 constructorMaybeNothing :: Expr TMaybeC
 constructorMaybeNothing = ETMAYBE 0
@@ -360,15 +363,24 @@ constructorMaybeNothing = ETMAYBE 0
 constructorMaybeJust :: Expr TMaybeC
 constructorMaybeJust = ETMAYBE 1
 
+class Finite a where 
+  numElems :: Int
+
+instance Finite 'TCh where 
+  numElems = 2
+
 data Type where
   TBV32 :: Type
   TBV64 :: Type
   TBool :: Type
-
   TCh :: Type
+  TPD :: Type
 
   TChMsgInfo :: Type
-
+  
+  -- easier to monomorphise
+  -- alternative is to use Proxy (Data.Proxy)
+  -- to carry type level information across
   TSetCh :: Type
 
   TMsgInfo :: Type
@@ -376,8 +388,8 @@ data Type where
   TMaybe :: Type -> Type
   TMaybeC :: Type
 
-  TNextRecv :: Type 
-  TNextRecvC :: Type
+  {- TNextRecv :: Type
+  TNextRecvC :: Type -}
 
 data Expr (t :: Type) where
   VAR :: String -> Expr a
@@ -390,34 +402,64 @@ data Expr (t :: Type) where
   EMAYBE_JUST :: Expr (TMaybe (a :: Type)) -> Expr (a :: Type)
   EMAYBE_C :: Expr (TMaybe a) -> Expr TMaybeC
 
-  ETNEXTRECV :: Int -> Expr TNextRecvC
+  {- ETNEXTRECV :: Int -> Expr TNextRecvC
   ENEXTRECV_NOTIFICATION :: Expr TNextRecv -> Expr TSetCh
-  ENEXTRECV_PPCALL :: Expr TNextRecv -> Expr TChMsgInfo
-  
+  ENEXTRECV_PPCALL :: Expr TNextRecv -> Expr TChMsgInfo -}
 
 caseMaybeTBV32 :: Expr (TMaybe TBV32) -> (Expr TBV32 -> Expr a) -> Expr a -> Expr a
 caseMaybeTBV32 v just nothing = ITE (EMAYBE_C v `EQU` constructorMaybeJust) (just (EMAYBE_JUST v)) nothing
 
-
-caseNextRecv :: Expr TNextRecv -> (Expr TSetCh -> Expr a) -> Expr TChMsgInfo -> Expr a -> Expr a 
-caseNextRecv v noti ppcall unk = undefined
+{- caseNextRecv :: Expr TNextRecv -> (Expr TSetCh -> Expr a) -> Expr TChMsgInfo -> Expr a -> Expr a
+caseNextRecv v noti ppcall unk = undefined -}
 
 pre :: Expr (TMaybe TBV32) -> Expr TBV32
 pre maybe32 = caseMaybeTBV32 maybe32 (\x -> x `EADD` EBV32 1) (EBV32 0)
 
+constMaybe :: Expr (TMaybe TBV32)
+constMaybe = VAR "hello"
+
+pre' :: Expr TBV32
+pre' = pre constMaybe
+
 tbitsize :: Type -> Int
 tbitsize TBV32 = 32
-tbitsize _ = undefined
+tbitsize TBV64 = 64 
+tbitsize TBool = 1
+tbitsize TCh = 8
+tbitsize TPD = 8
+tbitsize TChMsgInfo = (tbitsize TCh) + (tbitsize TChMsgInfo)
+tbitsize TSetCh = tbitsize TCh
+tbitsize TMsgInfo = 32
+tbitsize (TMaybe a) = (tbitsize TMaybeC) + tbitsize a
+tbitsize TMaybeC = 1
+{- tbitsize TNextRecv = (tbitsize TNextRecvC) + max (tbitsize TChMsgInfo) (tbitsize TSetCh)
+tbitsize TNextRecvC = 2 -}
 
-bitsize :: Expr t -> Int
+bitsize :: Expr (t :: Type) -> Int 
 bitsize _ = 32
+
+smtlib :: Expr (t :: Type) -> SExpr Atom 
+smtlib (VAR s) = A (AVar s) ::: Nil
+smtlib (EBV32 n) = A (AInt 32 n) ::: Nil
+smtlib (EQU lhs rhs) = A AEq ::: smtlib lhs ::: smtlib rhs ::: Nil
+smtlib (EADD lhs rhs) = A AAdd ::: smtlib lhs ::: smtlib rhs ::: Nil
+smtlib (ITE e lhs rhs) = A AITE ::: smtlib e  ::: smtlib lhs ::: smtlib rhs ::: Nil
+smtlib (ETMAYBE c) = A (AInt (tbitsize TMaybeC) c) ::: Nil
+smtlib (EMAYBE_JUST of_) = A (AExtract (tbitsize TMaybeC) (bitsize of_)) ::: smtlib of_ ::: Nil
+smtlib (EMAYBE_C c) = A (AExtract 0 (tbitsize TMaybeC)) ::: smtlib c ::: Nil
+{- smtlib (ETNEXTRECV v) = undefined
+smtlib (ENEXTRECV_NOTIFICATION v) = undefined
+smtlib (ENEXTRECV_PPCALL v) = undefined -}
 
 data Atom
   = AAdd
   | AEq
+  | AITE
+  | AExtract !Int !Int
   | AVar !String
   | ADefineFunc
   | AAtom !String
+  | AInt !Int !Int -- bitvector with size then value
 
 sAtom :: Atom -> T.Text
 sAtom = \case
@@ -426,9 +468,12 @@ sAtom = \case
   AVar s -> T.pack s
   ADefineFunc -> "define-fun"
   AAtom s -> T.pack s
+  AExtract n n' -> T.pack ("extract " ++ show n ++ " " ++ show n')
+  AITE -> T.pack "ite"
+  AInt sz val -> T.pack $ ("bv" ++ (show val) ++ " " ++ (show sz))
 
 toSExpr :: Expr t -> SExpr Atom
-toSExpr _ = error ""
+toSExpr = smtlib 
 
 mkLangPrinter :: SExprPrinter Atom (Expr t)
 mkLangPrinter =
@@ -439,4 +484,6 @@ mkLangPrinter =
 printSMT :: Expr t -> T.Text
 printSMT e = encode mkLangPrinter [e]
 
--- myPreCond = [smtfunc| |]
+
+data X = X 
+  deriving (Data, Typeable)

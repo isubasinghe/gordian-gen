@@ -44,6 +44,9 @@ executable gordian-gen
     EDSL.Tuple
     EDSL.Type
     SMT
+    Spec.Copier
+    Spec.Multiplexer
+    Spec.RingBuffer
     TH.SMTFunc
 
   build-depends:
