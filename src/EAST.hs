@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -12,28 +13,27 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module EAST where
 
 import Data.BitVector.Sized
+import Data.Data
 import Data.Kind ()
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import Data.SCargot
 import Data.SCargot.Repr.Basic
 import qualified Data.Text as T
-import GHC.Float (int2Float)
+import Data.Text.Internal.Fusion.Types (RS (RS0))
 import Data.Typeable
-import Data.Data
+import GHC.Float (int2Float)
 import GHC.Generics
   ( C,
     Constructor,
@@ -49,6 +49,7 @@ import GHC.Generics
     type (:+:),
   )
 import GHC.TypeLits
+import Text.Read (Lexeme(String))
 
 data MyMaybe a = MyNothing | MyJust !a
   deriving (Generic)
@@ -363,10 +364,10 @@ constructorMaybeNothing = ETMAYBE 0
 constructorMaybeJust :: Expr TMaybeC
 constructorMaybeJust = ETMAYBE 1
 
-class Finite a where 
+class Finite a where
   numElems :: Int
 
-instance Finite 'TCh where 
+instance Finite 'TCh where
   numElems = 2
 
 data Type where
@@ -375,38 +376,89 @@ data Type where
   TBool :: Type
   TCh :: Type
   TPD :: Type
-
   TChMsgInfo :: Type
-  
   -- easier to monomorphise
   -- alternative is to use Proxy (Data.Proxy)
   -- to carry type level information across
   TSetCh :: Type
-
   TMsgInfo :: Type
-
   TMaybe :: Type -> Type
   TMaybeC :: Type
+  TTuple :: Type -> Type -> Type
+  deriving (Typeable, Data)
 
-  {- TNextRecv :: Type
-  TNextRecvC :: Type -}
+{- TNextRecv :: Type
+TNextRecvC :: Type -}
+
+class TBitRepr a where
+  tbvsz :: Int
+  tname :: String
+
+instance TBitRepr 'TBV32 where
+  tbvsz = 32
+  tname = "BV32"
+
+instance TBitRepr 'TBV64 where
+  tbvsz = 64
+  tname = "BV64"
+
+
+instance TBitRepr 'TBool where
+  tbvsz = 1
+  tname = "BV1"
+
+instance TBitRepr 'TCh where
+  tbvsz = 8
+  tname = "BV8"
+
+instance TBitRepr 'TPD where
+  tbvsz = 8
+  tname = "BV8"
+
+instance TBitRepr 'TChMsgInfo where
+  tbvsz = (tbvsz @TCh) + (tbvsz @TMsgInfo)
+  tname = "ChMsgInfo"
+
+instance TBitRepr 'TSetCh where
+  tbvsz = (tbvsz @TCh) * 8
+  tname = "SetCh"
+
+
+instance TBitRepr 'TMsgInfo where
+  tbvsz = 32
+  tname = "MsgInfo"
+
+instance TBitRepr 'TMaybeC where
+  tbvsz = 1
+  tname = "MaybeC"
+
+instance (TBitRepr a, TBitRepr b) => TBitRepr (TTuple a b) where
+  tbvsz = (tbvsz @a) + (tbvsz @b)
+  tname = (tname @a) ++ "_prod_" ++ (tname @b)
+
+instance (TBitRepr a) => TBitRepr (TMaybe a) where
+  tbvsz = (tbvsz @TMaybeC) + (tbvsz @a)
+  tname = "Maybe_of_" ++ (tname @a)
 
 data Expr (t :: Type) where
-  VAR :: String -> Expr a
+  VAR :: (Typeable a, TBitRepr a) => String -> Expr a
   EBV32 :: Int -> Expr TBV32
-  EQU :: Expr a -> Expr a -> Expr TBool
+  EQU :: (Typeable a, TBitRepr a) => Expr a -> Expr a -> Expr TBool
   EADD :: Expr TBV32 -> Expr TBV32 -> Expr TBV32
-  ITE :: Expr TBool -> Expr a -> Expr a -> Expr a
-
+  ITE :: (Typeable a, TBitRepr a) => Expr TBool -> Expr a -> Expr a -> Expr a
   ETMAYBE :: Int -> Expr TMaybeC
-  EMAYBE_JUST :: Expr (TMaybe (a :: Type)) -> Expr (a :: Type)
-  EMAYBE_C :: Expr (TMaybe a) -> Expr TMaybeC
+  EMAYBE_JUST :: (Typeable a, TBitRepr a) => Expr (TMaybe (a :: Type)) -> Expr (a :: Type) -- get the value inside Just
+  EMAYBE_JUSTC :: (Typeable a, TBitRepr a) => Expr (a :: Type) -> Expr (TMaybe a) -- create a Just instance
+  EMAYBE_C :: (Typeable a, TBitRepr a) => Expr (TMaybe a) -> Expr TMaybeC -- get the union type
+  MKTUP :: (Typeable a, TBitRepr a, Typeable b, TBitRepr b) => Expr (a :: Type) -> Expr (b :: Type) -> Expr (TTuple a b)
+  FST :: (Typeable a, TBitRepr a, Typeable b, TBitRepr b) => Expr (TTuple a b) -> Expr (a :: Type)
+  SND :: (Typeable a, TBitRepr a, Typeable b, TBitRepr b) => Expr (TTuple a b) -> Expr (b :: Type)
+  FUN0 :: (Typeable a, TBitRepr a, TBitRepr b) => String -> Expr (a :: Type) -> Expr (b :: Type)
+  FUN1 :: (Typeable a, TBitRepr a, Typeable b, TBitRepr b, Typeable c,TBitRepr c) => String -> Expr (a :: Type) ->  Expr (b :: Type) -> Expr (c :: Type)
+  -- FUN2 :: (Typeable a, TBitRepr a, TBitRepr b, TBitRepr c) => String -> Expr (a :: Type) ->  Expr (b :: Type) -> Expr (c :: Type)
+  deriving (Typeable)
 
-  {- ETNEXTRECV :: Int -> Expr TNextRecvC
-  ENEXTRECV_NOTIFICATION :: Expr TNextRecv -> Expr TSetCh
-  ENEXTRECV_PPCALL :: Expr TNextRecv -> Expr TChMsgInfo -}
-
-caseMaybeTBV32 :: Expr (TMaybe TBV32) -> (Expr TBV32 -> Expr a) -> Expr a -> Expr a
+caseMaybeTBV32 :: (Typeable a, TBitRepr a) => Expr (TMaybe TBV32) -> (Expr TBV32 -> Expr a) -> Expr a -> Expr a
 caseMaybeTBV32 v just nothing = ITE (EMAYBE_C v `EQU` constructorMaybeJust) (just (EMAYBE_JUST v)) nothing
 
 {- caseNextRecv :: Expr TNextRecv -> (Expr TSetCh -> Expr a) -> Expr TChMsgInfo -> Expr a -> Expr a
@@ -421,41 +473,55 @@ constMaybe = VAR "hello"
 pre' :: Expr TBV32
 pre' = pre constMaybe
 
-tbitsize :: Type -> Int
-tbitsize TBV32 = 32
-tbitsize TBV64 = 64 
-tbitsize TBool = 1
-tbitsize TCh = 8
-tbitsize TPD = 8
-tbitsize TChMsgInfo = (tbitsize TCh) + (tbitsize TChMsgInfo)
-tbitsize TSetCh = tbitsize TCh
-tbitsize TMsgInfo = 32
-tbitsize (TMaybe a) = (tbitsize TMaybeC) + tbitsize a
-tbitsize TMaybeC = 1
-{- tbitsize TNextRecv = (tbitsize TNextRecvC) + max (tbitsize TChMsgInfo) (tbitsize TSetCh)
-tbitsize TNextRecvC = 2 -}
+asd :: Expr (TTuple TBV32 TBV64)
+asd = VAR "asd"
 
-bitsize :: Expr (t :: Type) -> Int 
-bitsize _ = 32
+funASD :: Expr (TTuple TBV32 TBV64)
+funASD = FUN0 "nothingness" asd
 
-smtlib :: Expr (t :: Type) -> SExpr Atom 
-smtlib (VAR s) = A (AVar s) ::: Nil
+fun1ASD :: Expr (TTuple TBV32 TBV64)
+fun1ASD = FUN1 "nextfun" constMaybe asd
+
+fstASD :: Expr TBV32
+fstASD = FST asd
+sndASD = SND asd
+
+isJust :: Maybe a -> Bool
+isJust (Just _) = True
+isJust _ = False
+
+bitsize :: forall t. (Typeable t, TBitRepr t) => Expr (t :: Type) -> Int
+bitsize x = tbvsz @t
+
+name :: forall t. (Typeable t, TBitRepr t) => Expr (t :: Type) -> String
+name _ = tname @t
+
+
+protectedWP :: Expr TCh -> Expr TMsgInfo -> Expr (TMaybe (TTuple TCh TMsgInfo))
+protectedWP ch msg = undefined
+
+smtlib :: forall t. Typeable t => Expr (t :: Type) -> SExpr Atom
+smtlib (VAR s) = A (AVar s)
 smtlib (EBV32 n) = A (AInt 32 n) ::: Nil
 smtlib (EQU lhs rhs) = A AEq ::: smtlib lhs ::: smtlib rhs ::: Nil
 smtlib (EADD lhs rhs) = A AAdd ::: smtlib lhs ::: smtlib rhs ::: Nil
-smtlib (ITE e lhs rhs) = A AITE ::: smtlib e  ::: smtlib lhs ::: smtlib rhs ::: Nil
-smtlib (ETMAYBE c) = A (AInt (tbitsize TMaybeC) c) ::: Nil
-smtlib (EMAYBE_JUST of_) = A (AExtract (tbitsize TMaybeC) (bitsize of_)) ::: smtlib of_ ::: Nil
-smtlib (EMAYBE_C c) = A (AExtract 0 (tbitsize TMaybeC)) ::: smtlib c ::: Nil
-{- smtlib (ETNEXTRECV v) = undefined
-smtlib (ENEXTRECV_NOTIFICATION v) = undefined
-smtlib (ENEXTRECV_PPCALL v) = undefined -}
+smtlib (ITE e lhs rhs) = A AITE ::: smtlib e ::: smtlib lhs ::: smtlib rhs ::: Nil
+smtlib (ETMAYBE c) = A (AInt (tbvsz @TMaybeC) c) ::: Nil
+smtlib (EMAYBE_JUST of_) = A (AExtract (tbvsz @TMaybeC) (bitsize of_)) ::: smtlib of_ ::: Nil
+smtlib (EMAYBE_JUSTC of_) = A (AExtract (tbvsz @TMaybeC) (bitsize of_)) ::: smtlib of_ ::: Nil
+smtlib (EMAYBE_C c) = A (AExtract 0 (tbvsz @TMaybeC)) ::: smtlib c ::: Nil
+smtlib (MKTUP a b) = A AConcat ::: smtlib a ::: smtlib b ::: Nil
+smtlib (FST a) = A (AExtract 0 (tbvsz @t)) ::: Nil
+smtlib (SND a) = A (AExtract 0 (bitsize a)) ::: Nil
+smtlib (FUN0 fname body) = A ADefineFunc ::: A (AAtom fname) ::: L [L []] ::: smtlib body ::: Nil
+smtlib (FUN1 fname arg1 body) = A ADefineFunc ::: A (AAtom fname) ::: L [L [smtlib arg1, A (AAtom (name arg1))]] ::: smtlib body ::: Nil
 
 data Atom
   = AAdd
   | AEq
   | AITE
   | AExtract !Int !Int
+  | AConcat
   | AVar !String
   | ADefineFunc
   | AAtom !String
@@ -468,22 +534,19 @@ sAtom = \case
   AVar s -> T.pack s
   ADefineFunc -> "define-fun"
   AAtom s -> T.pack s
-  AExtract n n' -> T.pack ("extract " ++ show n ++ " " ++ show n')
+  AExtract n n' -> T.pack $ "extract " ++ show n ++ " " ++ show n'
   AITE -> T.pack "ite"
-  AInt sz val -> T.pack $ ("bv" ++ (show val) ++ " " ++ (show sz))
+  AInt sz val -> T.pack $ "bv" ++ show val ++ " " ++ show sz
+  AConcat -> "concat"
 
-toSExpr :: Expr t -> SExpr Atom
-toSExpr = smtlib 
+toSExpr :: (Typeable t) => Expr t -> SExpr Atom
+toSExpr = smtlib
 
-mkLangPrinter :: SExprPrinter Atom (Expr t)
+mkLangPrinter :: (Typeable t) => SExprPrinter Atom (Expr t)
 mkLangPrinter =
   setFromCarrier toSExpr $
     setIndentStrategy (const Align) $
       basicPrint sAtom
 
-printSMT :: Expr t -> T.Text
+printSMT :: (Typeable t) => Expr t -> T.Text
 printSMT e = encode mkLangPrinter [e]
-
-
-data X = X 
-  deriving (Data, Typeable)
