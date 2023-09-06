@@ -1,3 +1,4 @@
+{- ORMOLU_DISABLE -}
 {-# LANGUAGE QuasiQuotes #-}
 module TH.SMTFunc where
 import Language.Haskell.TH
