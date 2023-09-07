@@ -27,6 +27,7 @@ executable gordian-gen
   hs-source-dirs: src
   main-is:        gordian-gen.hs
   other-modules:
+    AutoDerive.BitVecRepr
     EAST
     EDSL.Bool
     EDSL.Debug
@@ -45,6 +46,7 @@ executable gordian-gen
     EDSL.Type
     SMT
     Spec.Copier
+    Spec.CoreAbstract
     Spec.Multiplexer
     Spec.RingBuffer
     TH.SMTFunc

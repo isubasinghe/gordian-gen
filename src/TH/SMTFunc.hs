@@ -11,7 +11,8 @@ import Text.Parsec.Expr
 import Text.Parsec.Language (haskellStyle)
 import Text.Parsec.String
 import Text.Parsec.Pos
-newtype (BitVecRepr a) => SMTArg a = SMTArg a 
+
+-- newtype (BitVecRepr a) => SMTArg a = SMTArg a 
 
 location' :: Q SourcePos
 location' = aux <$> location
