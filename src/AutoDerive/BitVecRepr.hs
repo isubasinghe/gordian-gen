@@ -2,31 +2,37 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module AutoDerive.BitVecRepr where
 
-import Data.Proxy
+import Data.Proxy (Proxy (..))
 import GHC.Float (int2Float)
 import GHC.Generics
+  ( C,
+    Constructor (conName),
+    D,
+    Datatype (datatypeName),
+    Generic (Rep),
+    K1,
+    M1,
+    U1,
+    type (:*:),
+    type (:+:),
+  )
 
 class BitVecRepr a where
   numberOfConstructors :: Proxy a -> Int
@@ -128,8 +134,8 @@ instance GBitVecRepr U1 where
   gmaxSize _ = 0
   gbitvecSize _ = 0
   gsmtName _ = ""
-  gconstructors _ = undefined
-  gconstructorSizes _ = undefined
+  gconstructors _ = error "Cannot determin constructors for U1" 
+  gconstructorSizes _ = error "Cannot determine sizes for U1" 
 
 instance (BitVecRepr a) => GBitVecRepr (K1 i a) where
   gnumberOfConstructors _ = numberOfConstructors (Proxy :: Proxy a)
@@ -154,3 +160,10 @@ instance BitVecRepr Bool where
   smtName _ = "Bool"
   constructors _ = [Just "bvtrue", Just "bvfalse"]
   constructorSizes _ = [Just 1, Just 1]
+
+
+data MyMaybe a 
+  = MyJust !a 
+  | MyNothing 
+  deriving stock (Generic)
+  deriving anyclass (BitVecRepr)

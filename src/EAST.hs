@@ -2,23 +2,19 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators#-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
@@ -32,9 +28,7 @@ import Data.Proxy (Proxy (..))
 import Data.SCargot
 import Data.SCargot.Repr.Basic
 import qualified Data.Text as T
-import Data.Text.Internal.Fusion.Types (RS (RS0))
 import Data.Typeable
---
 import EDSL.Exp
 import GHC.Float (int2Float)
 import GHC.Generics
@@ -53,6 +47,13 @@ import GHC.Generics
   )
 import GHC.TypeLits
 import SMT
+
+data HList :: [*] -> * where
+  HNil :: HList '[]
+  HCons :: a -> HList xs -> HList (a ': xs)
+
+x = HCons 23 (HCons "ABC" HNil)
+
 
 data MaybeConstructors where
   MaybeCJust :: MaybeConstructors
@@ -93,7 +94,7 @@ data Type where
   TMaybe :: Type -> Type
   TMaybeC :: Type
   TTuple :: Type -> Type -> Type
-  TPlatformContext :: Type
+  TComposite :: Type
   deriving (Typeable)
 
 {- TNextRecv :: Type

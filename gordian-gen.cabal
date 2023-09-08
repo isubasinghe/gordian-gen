@@ -28,6 +28,7 @@ executable gordian-gen
   main-is:        gordian-gen.hs
   other-modules:
     AutoDerive.BitVecRepr
+    AutoDerive.SMTDatatype
     EAST
     EDSL.Bool
     EDSL.Debug
