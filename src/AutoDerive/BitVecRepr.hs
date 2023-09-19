@@ -2,6 +2,9 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -12,9 +15,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
 module AutoDerive.BitVecRepr where
@@ -64,6 +64,7 @@ class GBitVecRepr (f :: k) where
   gnumberOfConstructors :: Proxy f -> Int
   gmaxSize :: Proxy f -> Int
   gbitvecSize :: Proxy f -> Int
+  -- monomorphised SMT name
   gsmtName :: Proxy f -> String
 
   -- List of constructor sizes
@@ -134,8 +135,8 @@ instance GBitVecRepr U1 where
   gmaxSize _ = 0
   gbitvecSize _ = 0
   gsmtName _ = ""
-  gconstructors _ = error "Cannot determin constructors for U1" 
-  gconstructorSizes _ = error "Cannot determine sizes for U1" 
+  gconstructors _ = error "Cannot determin constructors for U1"
+  gconstructorSizes _ = error "Cannot determine sizes for U1"
 
 instance (BitVecRepr a) => GBitVecRepr (K1 i a) where
   gnumberOfConstructors _ = numberOfConstructors (Proxy :: Proxy a)
@@ -161,9 +162,13 @@ instance BitVecRepr Bool where
   constructors _ = [Just "bvtrue", Just "bvfalse"]
   constructorSizes _ = [Just 1, Just 1]
 
+data MyMaybe a
+  = MyJust !a
+  | MyNothing
+  deriving stock (Generic)
+  deriving anyclass (BitVecRepr)
 
-data MyMaybe a 
-  = MyJust !a 
-  | MyNothing 
+data MyX = MyXCons
+  | MyYCons
   deriving stock (Generic)
   deriving anyclass (BitVecRepr)

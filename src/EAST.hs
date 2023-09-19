@@ -14,7 +14,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators#-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
@@ -53,7 +53,6 @@ data HList :: [*] -> * where
   HCons :: a -> HList xs -> HList (a ': xs)
 
 x = HCons 23 (HCons "ABC" HNil)
-
 
 data MaybeConstructors where
   MaybeCJust :: MaybeConstructors
