@@ -57,6 +57,24 @@ instance Show (IntegralType a) where
 instance Show (FloatingType a) where
   show TypeFloat = "Float"
 
+typeWidth :: TypeR a -> Int
+typeWidth TypeRunit = 0
+typeWidth (TypeRprim t) = primWidth t
+typeWidth (TypeRrec t) = typeWidth t
+typeWidth (TypeRpair a b) = typeWidth a + typeWidth b
+
+primWidth :: PrimType a -> Int
+primWidth (IntegralNumType t) = integralWidth t
+primWidth (FloatingNumType t) = floatingWidth t
+
+integralWidth :: IntegralType a -> Int
+integralWidth TypeInt = 32
+integralWidth TypeInteger = 32
+integralWidth TypeWord8 = 8
+
+floatingWidth :: FloatingType a -> Int
+floatingWidth TypeFloat = 32
+
 {--
 data TypeableDict a where
   TypeableDict :: Typeable a => TypeableDict a

@@ -21,6 +21,7 @@ module EDSL.Maybe
 where
 
 import Data.Map
+import AutoDerive.BitVecRepr
 import EDSL.Elt
 import EDSL.Exp
 import EDSL.Match
@@ -34,6 +35,6 @@ instance Elt a => IsTuple (Maybe a)
 
 mkPattern ''Maybe
 
-liftMaybe :: Elt a => Maybe a -> Exp (Maybe a)
+liftMaybe :: (Elt a, BitVecRepr a) => Maybe a -> Exp (Maybe a)
 liftMaybe Nothing = Nothing_
 liftMaybe (Just x) = Just_ (Const (fromElt x))

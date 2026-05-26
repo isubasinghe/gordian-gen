@@ -12,6 +12,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,6 +21,9 @@
 module AutoDerive.BitVecRepr where
 
 import Data.Proxy (Proxy (..))
+import Data.Word
+import EDSL.Trace
+import EDSL.Type
 import GHC.Float (int2Float)
 import GHC.Generics
   ( C,
@@ -85,12 +89,14 @@ instance (GBitVecRepr f, Datatype c) => GBitVecRepr (M1 D c f) where
   gbitvecSize _ = gmaxSize (Proxy :: Proxy f) + fromCons
     where
       fromCons :: Int
-      fromCons = if numCons /= 1 then (+ (numCons `mod` 2)) . floor $ logBase 2 (int2Float numCons) else 0
+      fromCons = if numCons /= 1 then tagBits else 0
       numCons = gnumberOfConstructors (Proxy :: Proxy f)
 
-  gsmtName _ = datatypeName (undefined :: M1 D c f x) ++ (if rest /= "" then "_of_" ++ rest else "")
+  gsmtName proxy = datatypeName (asData proxy) ++ (if rest /= "" then "_of_" ++ rest else "")
     where
       rest = gsmtName (Proxy :: Proxy f)
+      asData :: Proxy (M1 D c f) -> M1 D c f x
+      asData _ = error "BitVecRepr: generic datatype metadata evaluated"
   gconstructorSizes _ = gconstructorSizes (Proxy :: Proxy f)
   gconstructors _ = gconstructors (Proxy :: Proxy f)
 
@@ -101,7 +107,9 @@ instance (GBitVecRepr f, Constructor c) => GBitVecRepr (M1 C c f) where
   gsmtName _ = gsmtName (Proxy :: Proxy f)
   gconstructors _ = [Just (currName ++ rest)]
     where
-      currName = conName (undefined :: M1 C c f x)
+      currName = conName (asConstructor (Proxy :: Proxy (M1 C c f)))
+      asConstructor :: Proxy (M1 C c f) -> M1 C c f x
+      asConstructor _ = error "BitVecRepr: generic constructor metadata evaluated"
       sname = gsmtName (Proxy :: Proxy f)
       rest = if sname /= "" then "_of_" ++ sname else ""
   gconstructorSizes _ = [if bvsize /= 0 then Just bvsize else Nothing]
@@ -116,8 +124,8 @@ instance (GBitVecRepr a, GBitVecRepr b) => GBitVecRepr (a :*: b) where
     where
       left = gsmtName (Proxy :: Proxy a)
       right = gsmtName (Proxy :: Proxy b)
-  gconstructors _ = undefined
-  gconstructorSizes _ = undefined
+  gconstructors _ = []
+  gconstructorSizes _ = []
 
 instance (GBitVecRepr a, GBitVecRepr b) => GBitVecRepr (a :+: b) where
   gnumberOfConstructors _ = gnumberOfConstructors (Proxy :: Proxy a) + gnumberOfConstructors (Proxy :: Proxy b)
@@ -154,13 +162,86 @@ instance BitVecRepr Int where
   constructors _ = []
   constructorSizes _ = []
 
-instance BitVecRepr Bool where
+instance BitVecRepr Integer where
   numberOfConstructors _ = 0
-  maxSize _ = 1
-  bitvecSize _ = 1
+  maxSize _ = 32
+  bitvecSize _ = 32
+  smtName _ = "Integer"
+  constructors _ = []
+  constructorSizes _ = []
+
+instance BitVecRepr Word8 where
+  numberOfConstructors _ = 0
+  maxSize _ = 8
+  bitvecSize _ = 8
+  smtName _ = "Word8"
+  constructors _ = []
+  constructorSizes _ = []
+
+instance BitVecRepr Bool where
+  numberOfConstructors _ = 2
+  maxSize _ = 0
+  bitvecSize _ = tagBits
   smtName _ = "Bool"
-  constructors _ = [Just "bvtrue", Just "bvfalse"]
-  constructorSizes _ = [Just 1, Just 1]
+  constructors _ = [Just "False", Just "True"]
+  constructorSizes _ = [Nothing, Nothing]
+
+instance BitVecRepr () where
+  numberOfConstructors _ = 1
+  maxSize _ = 0
+  bitvecSize _ = 0
+  smtName _ = "Unit"
+  constructors _ = [Nothing]
+  constructorSizes _ = [Nothing]
+
+instance BitVecRepr a => BitVecRepr (Maybe a)
+
+instance (BitVecRepr a, BitVecRepr b) => BitVecRepr (Either a b)
+
+instance (BitVecRepr a, BitVecRepr b) => BitVecRepr (a, b) where
+  numberOfConstructors _ = 1
+  maxSize _ = bitvecSize (Proxy @a) + bitvecSize (Proxy @b)
+  bitvecSize _ = bitvecSize (Proxy @a) + bitvecSize (Proxy @b)
+  smtName _ = smtName (Proxy @a) ++ "_prod_" ++ smtName (Proxy @b)
+  constructors _ = [Nothing]
+  constructorSizes _ = [Just (bitvecSize (Proxy @a) + bitvecSize (Proxy @b))]
+
+instance (BitVecRepr a, BitVecRepr b, BitVecRepr c) => BitVecRepr (a, b, c) where
+  numberOfConstructors _ = 1
+  maxSize _ = bitvecSize (Proxy @a) + bitvecSize (Proxy @b) + bitvecSize (Proxy @c)
+  bitvecSize _ = bitvecSize (Proxy @a) + bitvecSize (Proxy @b) + bitvecSize (Proxy @c)
+  smtName _ = smtName (Proxy @a) ++ "_prod_" ++ smtName (Proxy @b) ++ "_prod_" ++ smtName (Proxy @c)
+  constructors _ = [Nothing]
+  constructorSizes _ = [Just (bitvecSize (Proxy @a) + bitvecSize (Proxy @b) + bitvecSize (Proxy @c))]
+
+tagBits :: Int
+tagBits = 8
+
+bitvecSizeOfTypeR :: TypeR a -> Int
+bitvecSizeOfTypeR TypeRunit = 0
+bitvecSizeOfTypeR (TypeRprim t) = bitvecSizeOfPrimType t
+bitvecSizeOfTypeR (TypeRrec t) = bitvecSizeOfTypeR t
+bitvecSizeOfTypeR (TypeRpair a b) = bitvecSizeOfTypeR a + bitvecSizeOfTypeR b
+
+bitvecSizeOfPrimType :: PrimType a -> Int
+bitvecSizeOfPrimType (IntegralNumType t) = bitvecSizeOfIntegralType t
+bitvecSizeOfPrimType (FloatingNumType t) = bitvecSizeOfFloatingType t
+
+bitvecSizeOfIntegralType :: IntegralType a -> Int
+bitvecSizeOfIntegralType TypeInt = bitvecSize (Proxy @Int)
+bitvecSizeOfIntegralType TypeInteger = bitvecSize (Proxy @Integer)
+bitvecSizeOfIntegralType TypeWord8 = bitvecSize (Proxy @Word8)
+
+bitvecSizeOfFloatingType :: FloatingType a -> Int
+bitvecSizeOfFloatingType TypeFloat = 32
+
+bitvecSizeOfTraceR :: TraceR a -> Int
+bitvecSizeOfTraceR TraceRunit = 0
+bitvecSizeOfTraceR (TraceRprim t) = bitvecSizeOfPrimType t
+bitvecSizeOfTraceR (TraceRrec t) = bitvecSizeOfTypeR t
+bitvecSizeOfTraceR (TraceRundef t) = bitvecSizeOfTypeR t
+bitvecSizeOfTraceR (TraceRtag _ t) = tagBits + bitvecSizeOfTraceR t
+bitvecSizeOfTraceR (TraceRpair a b) = bitvecSizeOfTraceR a + bitvecSizeOfTraceR b
 
 data MyMaybe a
   = MyJust !a

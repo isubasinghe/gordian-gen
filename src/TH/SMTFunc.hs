@@ -22,15 +22,18 @@ location' = aux <$> location
 
 
 parseIO :: Parser a -> String -> IO a 
-parseIO = undefined
+parseIO parser input =
+  case parse (topLevel parser) "<smtfunc>" input of
+    Left err -> fail (show err)
+    Right value -> pure value
 
 
 data SMTFunc = SMTFunc
 
 parseSMTFunc :: Parser SMTFunc
-parseSMTFunc = undefined
+parseSMTFunc = SMTFunc <$ spaces
 topLevel :: Parser a -> Parser a
-topLevel p = undefined *> p <* eof
+topLevel p = spaces *> p <* spaces <* eof
 
 
 {- preCond x = [smtfunc|
@@ -38,4 +41,3 @@ topLevel p = undefined *> p <* eof
               MyJust a -> a == 4 
               MyNothing -> 0
   |] -}
-

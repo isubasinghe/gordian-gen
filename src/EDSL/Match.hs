@@ -10,6 +10,7 @@ import qualified EDSL.Debug as Debug
 import EDSL.Elt
 import EDSL.Exp
 import Text.Printf
+import AutoDerive.BitVecRepr
 
 -- Embedded pattern matching
 -- =========================
@@ -51,7 +52,7 @@ instance Elt a => Matching (Exp a) where
     Match _ x -> x
     _ -> e
 
-instance (Elt e, Matching r) => Matching (Exp e -> r) where
+instance (Elt e, BitVecRepr e, Matching r) => Matching (Exp e -> r) where
   type ResultT (Exp e -> r) = ResultT r
 
   mkFun f k = \x -> mkFun f (\xs -> k (x :-> xs))

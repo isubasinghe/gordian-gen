@@ -79,7 +79,7 @@ protectedPreFn :: Expr TBool
 protectedPreFn = FUN3 "protected-pre" chVAR miVAR ppcallVAR (protectedPre chVAR miVAR ppcallVAR)
 
 protectedPost :: Expr (TMaybe (TTuple TCh TMsgInfo))
-protectedPost = undefined
+protectedPost = EMAYBE_JUSTC (MKTUP chVAR miVAR)
 
 notifiedPre :: Expr TCh -> Expr (TSet TCh) -> Expr TBool
 notifiedPre = ELEM
@@ -88,4 +88,4 @@ notifiedPreFn :: Expr TBool
 notifiedPreFn = notifiedPre chVAR setChVAR
 
 notifiedPost :: Expr (TTuple (TSet TCh) (TSet TCh))
-notifiedPost = undefined
+notifiedPost = MKTUP unhandledNotifiedVar lastHandledNotifiedVar

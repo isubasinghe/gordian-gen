@@ -11,7 +11,7 @@ type TAG = Word8
 -- XXX: This structure both witnesses the layout of our representation
 -- types (as TypeR does) and represents a complete path of pattern matching
 -- through this type. It indicates which fields of the structure represent
--- the union tags (TraceRtag) or store undefined values (TraceRundef).
+-- the union tags (TraceRtag) or store inactive values (TraceRundef).
 --
 -- The function 'traceR' produces all valid paths through the type. For
 -- example the type '(Bool,Bool)' produces the following:
@@ -24,7 +24,7 @@ type TAG = Word8
 --
 -- In the paper we did not discuss the TraceRundef constructor. It is not
 -- necessary for the technique, it is just to keep track of values which
--- refer to undefined values because the constructor they are associated
+-- refer to inactive values because the constructor they are associated
 -- with is not valid. For example:
 --
 --   ghci> putStrLn . unlines . map show $ traceR @(Maybe Int)

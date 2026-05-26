@@ -26,8 +26,8 @@ sAtom = \case
   AVar s -> T.pack s
   ADefineFunc -> "define-fun"
   AAtom s -> T.pack s
-  AExtract n n' -> T.pack $ "extract " ++ show n ++ " " ++ show n'
+  AExtract n n' -> T.pack $ "(_ extract " ++ show n ++ " " ++ show n' ++ ")"
   AITE -> T.pack "ite"
-  AInt sz val -> T.pack $ "bv" ++ show val ++ " " ++ show sz
+  AInt sz val -> T.pack $ "(_ bv" ++ show val ++ " " ++ show sz ++ ")"
   AConcat -> "concat"
   AConj -> "and"

@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE IncoherentInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,9 +12,23 @@
 module EDSL.Tuple where
 
 import Data.Bits
+import Data.Proxy
+import AutoDerive.BitVecRepr
 import EDSL.Elt
 import EDSL.Type
 import GHC.Generics
+
+class ReprWidth t where
+  reprWidth :: Proxy t -> Int
+
+instance ReprWidth () where
+  reprWidth _ = 0
+
+instance (ReprWidth a, ReprWidth b) => ReprWidth (a, b) where
+  reprWidth _ = reprWidth (Proxy @a) + reprWidth (Proxy @b)
+
+instance {-# OVERLAPPABLE #-} BitVecRepr a => ReprWidth a where
+  reprWidth _ = bitvecSize (Proxy @a)
 
 class IsTuple t where
   type TupleR t

@@ -13,6 +13,7 @@ where
 
 import Control.Monad
 import Data.List
+import AutoDerive.BitVecRepr
 import EDSL.Elt
 import EDSL.Exp
 import EDSL.Rec
@@ -108,7 +109,7 @@ mkNormalC_pattern tn tvs cn fs mk match = do
     sig =
       forallT
         (map plainTV tvs)
-        (cxt (map (\t -> [t|Elt $(varT t)|]) tvs))
+        (cxt (concatMap eltAndBitVec tvs))
         ( foldr
             (\t ts -> [t|$t -> $ts|])
             [t|Exp $(foldl' appT (conT tn) (map varT tvs))|]
@@ -141,7 +142,7 @@ mkNormalC_build sum_type tn pts tvs tag cn fs0 fs fs1 = do
     sig =
       forallT
         (map plainTV tvs)
-        (cxt (map (\t -> [t|Elt $(varT t)|]) tvs))
+        (cxt (concatMap eltAndBitVec tvs))
         ( foldr
             (\t ts -> [t|$t -> $ts|])
             [t|Exp $(foldl' appT (conT tn) (map varT tvs))|]
@@ -182,7 +183,7 @@ mkNormalC_match sum_type tn pts tvs tag cn fs0 fs fs1 = do
     sig =
       forallT
         []
-        (cxt (map (\t -> [t|Elt $(varT t)|]) tvs))
+        (cxt (concatMap eltAndBitVec tvs))
         [t|
           Exp $(foldl' appT (conT tn) (map varT tvs)) ->
           Maybe $(tupT (map (\t -> [t|Exp $(return t)|]) fs))
@@ -214,3 +215,6 @@ mkNormalC_match sum_type tn pts tvs tag cn fs0 fs fs1 = do
     vs =
       reverse $
         [Nothing | _ <- concat fs0] ++ [Just f | f <- fs] ++ [Nothing | _ <- concat fs1]
+
+eltAndBitVec :: Name -> [PredQ]
+eltAndBitVec t = [[t|Elt $(varT t)|], [t|BitVecRepr $(varT t)|]]

@@ -20,6 +20,7 @@ module EDSL.Either
 where
 
 import Data.Map
+import AutoDerive.BitVecRepr
 import EDSL.Bool
 import EDSL.Elt
 import EDSL.Exp
@@ -34,6 +35,6 @@ instance (Elt a, Elt b) => IsTuple (Either a b)
 
 mkPattern ''Either
 
-liftEither :: (Elt a, Elt b) => Either a b -> Exp (Either a b)
+liftEither :: (Elt a, BitVecRepr a, Elt b, BitVecRepr b) => Either a b -> Exp (Either a b)
 liftEither (Left l) = Left_ (Const (fromElt l))
 liftEither (Right r) = Right_ (Const (fromElt r))

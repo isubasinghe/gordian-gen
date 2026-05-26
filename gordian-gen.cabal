@@ -46,8 +46,12 @@ executable gordian-gen
     EDSL.Tuple
     EDSL.Type
     SMT
+    SMT.DSL
+    Spec.AddI64
     Spec.Copier
     Spec.CoreAbstract
+    Spec.EDSLExample
+    Spec.MaybeIntSpec
     Spec.Multiplexer
     Spec.RingBuffer
     TH.SMTFunc

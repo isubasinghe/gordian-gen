@@ -20,6 +20,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as T
+import AutoDerive.BitVecRepr
 import EDSL.Elt
 import EDSL.Rec
 import EDSL.Trace
@@ -53,25 +54,25 @@ instance (KnownNat a) => Elt (SUInt a)
 data Exp a where
   -- STLC with explicit let-binding. We don't bother with the type-level environment.
   -- Values are stored in representation format
-  Const :: Elt a => EltR a -> Exp a
-  Var :: Idx t -> Exp t
-  Let :: Idx a -> Exp a -> Exp b -> Exp b -- letrec
+  Const :: (Elt a, BitVecRepr a) => EltR a -> Exp a
+  Var :: (Elt t, BitVecRepr t) => Idx t -> Exp t
+  Let :: (Elt a, BitVecRepr a) => Idx a -> Exp a -> Exp b -> Exp b -- letrec
   App :: Exp (a -> b) -> Exp a -> Exp b
   Lam :: Idx a -> Exp b -> Exp (a -> b)
   -- Add generic product types
-  Tuple :: IsTuple t => Tuple (TupleR t) -> Exp t
-  Prj :: IsTuple t => TupleIdx (TupleR t) e -> Exp t -> Exp e
+  Tuple :: (IsTuple t, Elt t, BitVecRepr t, ReprWidth (TupleR t)) => Tuple (TupleR t) -> Exp t
+  Prj :: (IsTuple t, Elt t, BitVecRepr t, Elt e, BitVecRepr e, ReprWidth (TupleR t), ReprWidth e) => TupleIdx (TupleR t) e -> Exp t -> Exp e
   -- Recursive types
   Unroll :: Exp (Rec a) -> Exp a
   Roll :: Exp a -> Exp (Rec a)
   -- Pattern matching
   Undef :: TypeR (EltR a) -> Exp a
   Match :: TraceR (EltR a) -> Exp a -> Exp a
-  Case :: Elt a => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
+  Case :: (Elt a, BitVecRepr a) => Exp a -> [(TraceR (EltR a), Exp b)] -> Exp b
   -- PrimOps
   Add :: Exp (SInt k) -> Exp (SInt k) -> Exp (SInt k)
   UAdd :: Exp (SUInt k) -> Exp (SUInt k) -> Exp (SUInt k)
-  Eq :: (Eq a) => Exp a -> Exp a -> Exp Bool
+  Eq :: (Eq a, Elt a, BitVecRepr a) => Exp a -> Exp a -> Exp Bool
   Func :: Idx a -> Exp b -> Exp (FuncIdx b)
 
 -- use as a type index to prevent doing any other options on this type
@@ -81,13 +82,13 @@ data FuncIdx t
 --
 data Tuple t where
   Unit :: Tuple ()
-  Exp :: Exp a -> Tuple a
+  Exp :: (Elt a, BitVecRepr a) => Exp a -> Tuple a
   Pair :: Tuple a -> Tuple b -> Tuple (a, b)
 
 data TupleIdx s t where
   PrjZ :: TupleIdx t t
-  PrjL :: TupleIdx l t -> TupleIdx (l, r) t
-  PrjR :: TupleIdx r t -> TupleIdx (l, r) t
+  PrjL :: (ReprWidth l, ReprWidth r) => TupleIdx l t -> TupleIdx (l, r) t
+  PrjR :: (ReprWidth l, ReprWidth r) => TupleIdx r t -> TupleIdx (l, r) t
 
 -- Very unsafe variable bindings!
 --

@@ -2,12 +2,9 @@
   # name = "project-name";
   compiler-nix-name = "ghc8107"; # Version of GHC to use
 
-  crossPlatforms = p: pkgs.lib.optionals pkgs.stdenv.hostPlatform.isx86_64 ([
-    p.mingwW64
-    # p.ghcjs # TODO GHCJS support for GHC 9.2
-  ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-    p.musl64
-  ]);
+  # Keep the dev shell native-only. The hix template's cross targets pull large
+  # GHC toolchains from cache.iog.io, which makes direnv fragile on poor links.
+  crossPlatforms = _: [ ];
 
   # Tools to include in the development shell
   shell.tools.cabal = "latest";
